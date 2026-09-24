@@ -1,6 +1,7 @@
 import 'package:finanzas/app/app.dart';
 import 'package:finanzas/app/providers.dart';
 import 'package:finanzas/app/router.dart';
+import 'package:finanzas/ui/design/app_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,7 +45,7 @@ Future<void> unmountApp(WidgetTester tester) async {
 Finder field(String label) => find.widgetWithText(TextField, label);
 
 Finder navItem(String label) =>
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
+    find.descendant(of: find.byType(AppBottomBar), matching: find.text(label));
 
 /// Abre [location] encima de la pantalla actual, como al navegar desde otra
 /// pantalla (así el formulario tiene a dónde volver al guardar).

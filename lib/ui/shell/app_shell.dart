@@ -1,44 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Marco con la barra inferior de 5 pestañas. Cada pestaña conserva su propia
-/// pila de navegación.
+import '../../app/router.dart';
+import '../design/app_bottom_bar.dart';
+
+/// Marco con la barra inferior: cuatro destinos y el botón central "+" para
+/// registrar un movimiento. Cada destino conserva su propia pila.
+///
+/// La pestaña de movimientos se llama "Historial" en la barra: "Movimientos"
+/// no cabe a 12 sp en 320 dp (mide 73 dp y el hueco es de 65). El título de
+/// la pantalla sigue siendo "Movimientos".
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  static const _destinations = [
-    NavigationDestination(
-        icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
-    NavigationDestination(
-        icon: Icon(Icons.receipt_long_outlined),
-        selectedIcon: Icon(Icons.receipt_long),
-        label: 'Movimientos'),
-    NavigationDestination(
-        icon: Icon(Icons.account_balance_wallet_outlined),
-        selectedIcon: Icon(Icons.account_balance_wallet),
-        label: 'Cuentas'),
-    NavigationDestination(
-        icon: Icon(Icons.handshake_outlined),
-        selectedIcon: Icon(Icons.handshake),
-        label: 'Deudas'),
-    NavigationDestination(
-        icon: Icon(Icons.more_horiz), selectedIcon: Icon(Icons.more_horiz), label: 'Más'),
+  static const _items = [
+    BottomBarItem(icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Inicio'),
+    BottomBarItem(
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long_rounded,
+      label: 'Historial',
+    ),
+    BottomBarItem(
+      icon: Icons.account_balance_wallet_outlined,
+      selectedIcon: Icons.account_balance_wallet_rounded,
+      label: 'Cuentas',
+    ),
+    BottomBarItem(
+      icon: Icons.more_horiz_rounded,
+      selectedIcon: Icons.more_horiz_rounded,
+      label: 'Más',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        destinations: _destinations,
-        onDestinationSelected: (i) => navigationShell.goBranch(
-          i,
-          // Tocar la pestaña activa vuelve a su raíz.
-          initialLocation: i == navigationShell.currentIndex,
-        ),
+      bottomNavigationBar: AppBottomBar(
+        items: _items,
+        currentIndex: navigationShell.currentIndex,
+        onSelected: (i) =>
+            // Tocar la pestaña activa vuelve a su raíz.
+            navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
+        onAction: () => context.push(Routes.transactionNew),
       ),
     );
   }

@@ -8,7 +8,6 @@ import 'providers.dart';
 import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
-import '../ui/common/placeholder_screen.dart';
 import '../ui/design/gallery_screen.dart';
 import '../ui/home/home_screen.dart';
 import '../ui/more/more_screen.dart';
@@ -24,7 +23,6 @@ abstract final class Routes {
   static const home = '/inicio';
   static const transactions = '/movimientos';
   static const accounts = '/cuentas';
-  static const debts = '/deudas';
   static const more = '/mas';
   static const gallery = '/mas/galeria';
 
@@ -114,17 +112,6 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
                       AccountFormScreen(accountId: state.pathParameters['id']),
                 ),
               ],
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: Routes.debts,
-              builder: (_, _) => const PlaceholderScreen(
-                title: 'Deudas',
-                icon: Icons.handshake_outlined,
-              ),
             ),
           ],
         ),

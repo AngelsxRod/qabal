@@ -110,8 +110,8 @@ class _Destination extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.clip,
               style: context.text.label.copyWith(
-                fontSize: 10,
-                letterSpacing: -0.1,
+                fontSize: 12,
+                letterSpacing: 0,
                 color: color,
                 fontWeight: FontWeight.w500,
               ),
