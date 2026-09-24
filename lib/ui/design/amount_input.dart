@@ -41,28 +41,47 @@ class AmountInput extends StatelessWidget {
         Semantics(
           label: label,
           textField: true,
-          child: TextField(
-            controller: controller,
-            autofocus: autofocus,
-            onChanged: onChanged,
-            textAlign: TextAlign.center,
-            style: style,
-            cursorColor: c.accent,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-            decoration: InputDecoration(
-              filled: false,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-              hintText: '0.00',
-              hintStyle: style.copyWith(color: c.textTertiary.withValues(alpha: 0.5)),
-              prefixText: currency == null ? null : '${currencySymbol(currency!)} ',
-              prefixStyle: style.copyWith(color: c.textTertiary),
-              contentPadding: const EdgeInsets.symmetric(vertical: Space.sm),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (currency != null)
+                ExcludeSemantics(
+                  child: Text(
+                    currencySymbol(currency!),
+                    style: style.copyWith(color: c.textTertiary),
+                  ),
+                ),
+              if (currency != null) const SizedBox(width: Space.sm),
+              // El ancho sigue al texto para que el símbolo quede pegado a las
+              // cifras mientras se escribe.
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 96, maxWidth: 220),
+                child: IntrinsicWidth(
+                  child: TextField(
+                    controller: controller,
+                    autofocus: autofocus,
+                    onChanged: onChanged,
+                    textAlign: TextAlign.center,
+                    style: style,
+                    cursorColor: c.accent,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                    decoration: InputDecoration(
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      hintText: '0.00',
+                      hintStyle: style.copyWith(color: c.textTertiary.withValues(alpha: 0.5)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: Space.sm),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         if (errorText != null)

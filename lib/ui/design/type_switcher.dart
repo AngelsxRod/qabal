@@ -52,7 +52,7 @@ class TypeSwitcher<T> extends StatelessWidget {
                       label,
                       maxLines: 1,
                       style: t.bodyStrong.copyWith(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: v == value ? (colorOf?.call(v) ?? c.textPrimary) : c.textSecondary,
                       ),
                     ),

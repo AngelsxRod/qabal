@@ -65,12 +65,16 @@ class _CategoryGrid extends StatelessWidget {
           child: Text(title, style: t.heading.copyWith(color: c.textPrimary)),
         ),
         Flexible(
-          child: GridView.count(
+          child: GridView(
             shrinkWrap: true,
-            crossAxisCount: 4,
-            mainAxisSpacing: Space.sm,
-            crossAxisSpacing: Space.xs,
-            childAspectRatio: 0.82,
+            // 3 columnas en pantallas estrechas (320 dp): con 4, nombres como
+            // "Supermercado" se parten a media palabra.
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.sizeOf(context).width < 360 ? 3 : 4,
+              mainAxisExtent: 104,
+              mainAxisSpacing: Space.xs,
+              crossAxisSpacing: Space.xs,
+            ),
             padding: const EdgeInsets.fromLTRB(Space.md, 0, Space.md, Space.xl),
             children: items,
           ),
@@ -106,7 +110,7 @@ class _Cell extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.md),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(Space.xs),
+          padding: const EdgeInsets.symmetric(vertical: Space.xs),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -125,6 +129,8 @@ class _Cell extends StatelessWidget {
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: t.label.copyWith(
+                  fontSize: 11.5,
+                  letterSpacing: 0,
                   color: selected ? c.textPrimary : c.textSecondary,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),

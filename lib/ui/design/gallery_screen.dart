@@ -82,6 +82,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     _cat('default:subscriptions', 'Suscripciones', 'subscriptions', CategoryKind.expense),
     _cat('default:gifts-donations', 'Regalos', 'card_giftcard', CategoryKind.expense),
     _cat('default:other-expense', 'Otros gastos', 'more_horiz', CategoryKind.expense),
+    _cat('default:salary', 'Sueldo', 'payments', CategoryKind.income),
   ];
 
   @override
@@ -232,7 +233,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               onPressed: () async {
                 final pick = await showCategoryPicker(
                   context,
-                  categories: _categories,
+                  categories: _categories.where((c) => c.kind == CategoryKind.expense).toList(),
                   selectedId: _category,
                 );
                 if (pick != null) setState(() => _category = pick.id);

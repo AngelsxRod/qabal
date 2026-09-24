@@ -49,7 +49,8 @@ class AppBottomBar extends StatelessWidget {
             children: [
               item(0),
               item(1),
-              Expanded(
+              SizedBox(
+                width: 60,
                 child: Center(
                   child: Semantics(
                     button: true,
@@ -109,10 +110,10 @@ class _Destination extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.clip,
               style: context.text.label.copyWith(
-                fontSize: 10.5,
-                letterSpacing: 0,
+                fontSize: 10,
+                letterSpacing: -0.1,
                 color: color,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
