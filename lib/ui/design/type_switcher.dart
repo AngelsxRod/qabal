@@ -48,12 +48,21 @@ class TypeSwitcher<T> extends StatelessWidget {
                       borderRadius: BorderRadius.circular(Radii.sm + 2),
                       border: v == value ? Border.all(color: c.border) : null,
                     ),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: t.bodyStrong.copyWith(
-                        fontSize: 13,
-                        color: v == value ? (colorOf?.call(v) ?? c.textPrimary) : c.textSecondary,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      // Si la etiqueta no cabe (320 dp), se reduce en lugar de recortarse.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          style: t.bodyStrong.copyWith(
+                            fontSize: 13,
+                            color: v == value
+                                ? (colorOf?.call(v) ?? c.textPrimary)
+                                : c.textSecondary,
+                          ),
+                        ),
                       ),
                     ),
                   ),

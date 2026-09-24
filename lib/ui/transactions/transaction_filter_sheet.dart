@@ -24,6 +24,7 @@ Future<TransactionFilterParams?> showTransactionFilterSheet(
 ) => showModalBottomSheet<TransactionFilterParams>(
   context: context,
   isScrollControlled: true,
+  useRootNavigator: true,
   useSafeArea: true,
   showDragHandle: true,
   builder: (_) => _FilterSheet(initial: initial),

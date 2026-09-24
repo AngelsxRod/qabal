@@ -8,6 +8,7 @@ import '../accounts/account_labels.dart';
 import '../accounts/no_accounts_invite.dart';
 import '../common/async_body.dart';
 import '../design/tab_app_bar.dart';
+import '../design/tokens.dart';
 import 'transaction_filter_params.dart';
 import 'transaction_filter_sheet.dart';
 import 'transaction_labels.dart';
@@ -45,6 +46,8 @@ class TransactionsScreen extends ConsumerWidget {
             },
             icon: Badge(
               isLabelVisible: params.activeCount > 0,
+              backgroundColor: context.colors.accent,
+              textColor: context.colors.onAccent,
               label: Text('${params.activeCount}'),
               child: const Icon(Icons.tune_rounded),
             ),

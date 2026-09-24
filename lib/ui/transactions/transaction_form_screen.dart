@@ -282,9 +282,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   Future<void> _pickContact(List<Contact> contacts) async {
+    // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.
+    FocusScope.of(context).unfocus();
     final picked = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) => _ContactSheet(
@@ -327,6 +330,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _pickDate() async {
+    // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.
+    FocusScope.of(context).unfocus();
     final today = ref.read(dayProvider);
     final picked = await showDatePicker(
       context: context,
@@ -338,6 +343,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   Future<void> _pickCategory(List<Category> options) async {
+    // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.
+    FocusScope.of(context).unfocus();
     final pick = await showCategoryPicker(context, categories: options, selectedId: _categoryId);
     if (pick == null) return;
     setState(() {

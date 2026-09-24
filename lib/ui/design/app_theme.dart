@@ -94,6 +94,7 @@ ThemeData _build(Brightness brightness, AppColors c) {
         disabledBackgroundColor: c.surfaceAlt,
         disabledForegroundColor: c.textTertiary,
         minimumSize: const Size(kMinTap, 52),
+        padding: const EdgeInsets.symmetric(horizontal: Space.lg),
         elevation: 0,
         textStyle: t.button,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md + 2)),

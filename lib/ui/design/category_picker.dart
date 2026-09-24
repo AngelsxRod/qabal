@@ -25,6 +25,7 @@ Future<CategoryPick?> showCategoryPicker(
 }) => showModalBottomSheet<CategoryPick>(
   context: context,
   isScrollControlled: true,
+  useRootNavigator: true,
   useSafeArea: true,
   showDragHandle: true,
   builder: (_) => _CategoryGrid(
