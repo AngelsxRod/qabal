@@ -66,7 +66,7 @@ void main() {
 
     // Tocarlo no lo elige: si lo hiciera, crear la cuenta fallaría (las
     // tarjetas piden sus datos) y no habría cuenta bancaria al final.
-    await tester.tap(find.text('Tarjeta de crédito · Próximamente'));
+    await tester.tap(find.text('Tarjeta · Próximamente'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cuenta bancaria'));
     await tester.pumpAndSettle();

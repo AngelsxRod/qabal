@@ -380,6 +380,22 @@ void main() {
       await unmountApp(tester);
     });
 
+    testWidgets('al editar, la cuenta del movimiento va primera para que se vea elegida', (
+      tester,
+    ) async {
+      await openEdit(tester);
+
+      final chips = find.byType(AccountChips);
+      final cashX = tester
+          .getTopLeft(find.descendant(of: chips, matching: find.text('Mi caja')))
+          .dx;
+      final bankX = tester
+          .getTopLeft(find.descendant(of: chips, matching: find.text('Mi banco')))
+          .dx;
+      expect(cashX, lessThan(bankX)); // aunque "Mi banco" gane alfabéticamente
+      await unmountApp(tester);
+    });
+
     testWidgets('la fecha de hoy y de ayer se muestran con su nombre', (tester) async {
       final today = await env.expense(cash.id, 100, DateTime(2026, 9, 1));
       final yesterday = await env.expense(cash.id, 100, DateTime(2026, 8, 31));

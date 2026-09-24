@@ -181,7 +181,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                         type,
                         type == AccountType.creditCard
                             // Las tarjetas se habilitan en una fase posterior.
-                            ? '${accountTypeLabel(type)} · Próximamente'
+                            ? 'Tarjeta · Próximamente'
                             : accountTypeLabel(type),
                         enabled: type != AccountType.creditCard,
                       ),
@@ -195,8 +195,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   value: _currency,
                   onChanged: (v) => setState(() => _currency = v),
                   options: [
-                    for (final cur in {...accountCurrencies, _currency})
-                      Option(cur, '$cur (${currencySymbol(cur)})'),
+                    for (final cur in {...accountCurrencies, _currency}) Option(cur, cur),
                   ],
                 ),
                 const SizedBox(height: Space.xl),

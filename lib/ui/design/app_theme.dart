@@ -132,6 +132,7 @@ ThemeData _build(Brightness brightness, AppColors c) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
     ),
     dialogTheme: DialogThemeData(
+      insetPadding: const EdgeInsets.symmetric(horizontal: Space.xl, vertical: Space.xl),
       backgroundColor: c.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,

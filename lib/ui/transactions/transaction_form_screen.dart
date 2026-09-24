@@ -451,8 +451,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         !a.isArchived || a.id == _existing?.accountId || a.id == _existing?.transferAccountId;
     final selectableAccounts = accounts.values.where(selectable).toList()
       ..sort((a, b) {
-        if (a.id == _lastUsedId) return -1;
-        if (b.id == _lastUsedId) return 1;
+        // Al editar va primero la cuenta del movimiento (que se vea elegida);
+        // al crear, la última usada.
+        final first = _isEditing ? _existing?.accountId : _lastUsedId;
+        if (a.id == first) return -1;
+        if (b.id == first) return 1;
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
 
@@ -556,7 +559,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         if (isTransfer) ...[
           label('HACIA'),
           AccountChips(
-            accounts: selectableAccounts.where((a) => a.id != _accountId).toList(),
+            accounts: [
+              for (final a in selectableAccounts)
+                if (a.id != _accountId && a.id == _existing?.transferAccountId) a,
+              for (final a in selectableAccounts)
+                if (a.id != _accountId && a.id != _existing?.transferAccountId) a,
+            ],
             selectedId: _destinationId,
             errorText: _errors[ErrorField.destination],
             onSelected: (id) => setState(() {
