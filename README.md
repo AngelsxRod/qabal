@@ -1,17 +1,32 @@
-# finanzas
+# Gestor de finanzas personales
 
-A new Flutter project.
+App Android de finanzas personales, offline-first: la base de datos vive en el teléfono (Drift/SQLite), sin backend propio. A futuro, backup opcional en el Google Drive del usuario (appDataFolder).
 
-## Getting Started
+## Requisitos
 
-This project is a starting point for a Flutter application.
+- Flutter estable (probado con 3.47.5) y Android SDK con licencias aceptadas.
+- `flutter doctor -v` sin errores.
 
-A few resources to get you started if this is your first Flutter project:
+## Puesta en marcha
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Los archivos generados (`*.g.dart`) no se versionan; hay que generarlos tras clonar y cada vez que cambien las tablas de Drift:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+dart run build_runner build
+flutter run
+```
+
+## Comandos útiles
+
+```bash
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+## Estructura
+
+- `lib/data/database/`: base de datos Drift (tablas en `tables/`).
+- `lib/domain/credit_card/`: lógica pura de ciclos y estados de cuenta de tarjeta.
+- `test/`: pruebas de dominio y de esquema (base en memoria).
