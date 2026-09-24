@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/providers.dart';
-import '../../app/theme.dart';
+import '../design/tokens.dart';
 
 String transactionTypeLabel(TransactionType type) => switch (type) {
   TransactionType.expense => 'Gasto',
@@ -16,7 +16,7 @@ IconData transactionTypeIcon(TransactionType type) => switch (type) {
 };
 
 Color transactionTypeColor(BuildContext context, TransactionType type) {
-  final colors = context.moneyColors;
+  final colors = context.colors;
   return switch (type) {
     TransactionType.expense => colors.expense,
     TransactionType.income => colors.income,

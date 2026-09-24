@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../../app/theme.dart';
+import '../design/tokens.dart';
 import '../../core/format/money.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
@@ -114,7 +114,7 @@ class _BalanceHeader extends StatelessWidget {
                 formatMoney(item.balanceMinor, a.currency),
                 style: theme.textTheme.headlineMedium?.copyWith(
                   color: item.balanceMinor < 0
-                      ? context.moneyColors.expense
+                      ? context.colors.expense
                       : theme.colorScheme.onPrimaryContainer,
                 ),
               ),

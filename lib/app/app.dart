@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'router.dart';
-import 'theme.dart';
+import '../ui/design/app_theme.dart';
 
 /// Localización única de la app; también rige los selectores de fecha.
 const appLocale = Locale('es', 'GT');

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/providers.dart';
-import '../../app/theme.dart';
+import '../design/tokens.dart';
 import '../../core/format/money.dart';
 import 'transaction_labels.dart';
 
@@ -31,7 +31,7 @@ class TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tx = transaction;
     final theme = Theme.of(context);
-    final colors = context.moneyColors;
+    final colors = context.colors;
     final source = accounts[tx.accountId];
     final dest = tx.transferAccountId == null ? null : accounts[tx.transferAccountId];
     final isTransfer = tx.type == TransactionType.transfer;

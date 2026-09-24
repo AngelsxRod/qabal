@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../../app/theme.dart';
+import '../design/tokens.dart';
 import '../../core/format/money.dart';
 import '../common/async_body.dart';
 import 'account_labels.dart';
@@ -52,8 +52,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         data: (all) {
           final plain = all.where((b) => isPlainAccount(b.account)).toList();
           if (plain.isEmpty) return const NoAccountsInvite();
-          final visible =
-              plain.where((b) => _showArchived || !b.account.isArchived).toList();
+          final visible = plain.where((b) => _showArchived || !b.account.isArchived).toList();
           if (visible.isEmpty) {
             return const Center(child: Text('Todas tus cuentas están archivadas.'));
           }
@@ -91,7 +90,7 @@ class _AccountTile extends StatelessWidget {
       trailing: Text(
         formatMoney(item.balanceMinor, a.currency),
         style: theme.textTheme.titleMedium?.copyWith(
-          color: negative ? context.moneyColors.expense : null,
+          color: negative ? context.colors.expense : null,
         ),
       ),
       onTap: () => context.push(Routes.accountDetail(a.id)),
