@@ -2,6 +2,7 @@ import 'package:finanzas/app/app.dart';
 import 'package:finanzas/app/providers.dart';
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/ui/design/app_bottom_bar.dart';
+import 'package:finanzas/ui/design/account_chips.dart';
 import 'package:finanzas/ui/design/amount_input.dart';
 import 'package:finanzas/ui/design/day_header.dart';
 import 'package:finanzas/ui/design/transaction_row.dart';
@@ -80,20 +81,16 @@ String? errorOf(WidgetTester tester, String label) {
 
 /// [text] dentro de la fila de movimiento cuyo título es [title] (el mismo
 /// monto puede aparecer también en el total del día).
-Finder inRow(String title, String text) => find.descendant(
-  of: find.widgetWithText(TransactionRow, title),
-  matching: find.text(text),
-);
+Finder inRow(String title, String text) =>
+    find.descendant(of: find.widgetWithText(TransactionRow, title), matching: find.text(text));
 
 /// [text] dentro del encabezado del día [label].
 Finder inDayHeader(String label, String text) =>
     find.descendant(of: find.widgetWithText(DayHeader, label), matching: find.text(text));
 
 /// El campo de texto del [index]-ésimo `AmountInput` de la pantalla.
-Finder amountField([int index = 0]) => find.descendant(
-  of: find.byType(AmountInput).at(index),
-  matching: find.byType(TextField),
-);
+Finder amountField([int index = 0]) =>
+    find.descendant(of: find.byType(AmountInput).at(index), matching: find.byType(TextField));
 
 /// Escribe [text] en el `AmountInput` número [index] (pasa por el formateador).
 Future<void> enterAmount(WidgetTester tester, String text, {int index = 0}) async {
@@ -109,3 +106,33 @@ String amountText(WidgetTester tester, [int index = 0]) =>
 /// `PickerRow`…), o null.
 Finder errorIn(Finder inside, String message) =>
     find.descendant(of: inside, matching: find.text(message));
+
+/// Elige la cuenta [name] en el grupo de chips número [group] (0 = cuenta u
+/// origen, 1 = destino de una transferencia).
+Future<void> chooseAccount(WidgetTester tester, String name, {int group = 0}) async {
+  await tester.tap(
+    find.descendant(of: find.byType(AccountChips).at(group), matching: find.text(name)),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Abre el selector de categoría del formulario y elige [name].
+Future<void> chooseCategory(WidgetTester tester, String name) async {
+  await tester.tap(find.text('Categoría'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(name).last);
+  await tester.pumpAndSettle();
+}
+
+/// Despliega "Más detalles" si está plegado.
+Future<void> openMoreDetails(WidgetTester tester) async {
+  final more = find.text('Más detalles');
+  if (more.evaluate().isNotEmpty) {
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+  }
+}
+
+/// Texto de error dentro del chip de cuentas número [group].
+Finder chipsError(String message, {int group = 0}) =>
+    errorIn(find.byType(AccountChips).at(group), message);

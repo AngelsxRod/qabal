@@ -3,19 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
+import '../../app/router.dart';
 import '../../core/format/dates.dart';
-import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import '../../domain/clock.dart';
 import '../../domain/errors.dart';
 import '../accounts/account_labels.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
 import '../common/describe_error.dart';
-import '../common/money_text_field.dart';
+import '../design/account_chips.dart';
+import '../design/amount_input.dart';
+import '../design/app_button.dart';
+import '../design/app_card.dart';
+import '../design/bottom_action_bar.dart';
+import '../design/category_avatar.dart';
+import '../design/category_picker.dart';
+import '../design/category_style.dart';
+import '../design/empty_state.dart';
+import '../design/picker_row.dart';
+import '../design/tokens.dart';
+import '../design/type_switcher.dart';
+import '../design/typography.dart';
 import 'transaction_labels.dart';
 
-/// Marca del valor "Nuevo…" dentro de los selectores.
-const _createNew = '__new__';
+/// Valores especiales de la hoja de contactos.
+const _noContact = '';
+const _newContact = '__new__';
 
 /// Registra un movimiento (gasto, ingreso o transferencia) o, si recibe
 /// [transactionId], lo edita o elimina.
@@ -47,6 +61,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   String? _contactId;
   late DateTime _date;
   Set<String> _tagIds = {};
+  bool _moreOpen = false;
+
+  /// Cuenta del último movimiento registrado: va primera y preseleccionada.
+  String? _lastUsedId;
 
   /// Movimiento original al editar: de él se conserva lo que el formulario no
   /// muestra (deuda, estado de cuenta, comprobante) porque `update` reemplaza
@@ -67,7 +85,20 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (_isEditing) {
       _loading = true;
       _load();
+    } else {
+      _loadLastUsed();
     }
+  }
+
+  Future<void> _loadLastUsed() async {
+    final latest = await ref
+        .read(transactionRepositoryProvider)
+        .list(const TransactionFilter(limit: 1));
+    if (!mounted || latest.isEmpty) return;
+    setState(() {
+      _lastUsedId = latest.first.accountId;
+      _accountId ??= _lastUsedId;
+    });
   }
 
   Future<void> _load() async {
@@ -87,12 +118,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       _categoryId = tx.categoryId;
       _contactId = tx.contactId;
       _date = dateOnly(tx.occurredAt);
-      _amount.text = formatPlain(tx.amountMinor);
+      _amount.text = formatGrouped(tx.amountMinor);
       if (tx.transferAmountMinor != null) {
-        _destAmount.text = formatPlain(tx.transferAmountMinor!);
+        _destAmount.text = formatGrouped(tx.transferAmountMinor!);
       }
       _note.text = tx.note ?? '';
       _tagIds = tags.map((t) => t.id).toSet();
+      _moreOpen = tx.contactId != null || tags.isNotEmpty || (tx.note ?? '').isNotEmpty;
       _loading = false;
     });
   }
@@ -124,7 +156,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (amountText.isEmpty) {
       errors[ErrorField.amount] = 'Escribe un monto';
     } else {
-      amount = parseMinor(amountText);
+      amount = parseInputMinor(amountText);
       if (amount == null) errors[ErrorField.amount] = invalidAmountMessage;
     }
     if (source == null) errors[ErrorField.account] = 'Elige una cuenta';
@@ -138,10 +170,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         if (text.isEmpty) {
           errors[ErrorField.transferAmount] = 'Escribe el monto que llega';
         } else {
-          destAmount = parseMinor(text);
-          if (destAmount == null) {
-            errors[ErrorField.transferAmount] = invalidAmountMessage;
-          }
+          destAmount = parseInputMinor(text);
+          if (destAmount == null) errors[ErrorField.transferAmount] = invalidAmountMessage;
         }
       }
     }
@@ -224,10 +254,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   // ---------------------------------------------------------------------
-  // Alta rápida de contactos y etiquetas
+  // Selectores y alta rápida de contactos y etiquetas
   // ---------------------------------------------------------------------
 
-  Future<String?> _askName(String title, String label) {
+  Future<String?> _askName(String title) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -237,7 +267,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(labelText: label),
+          decoration: const InputDecoration(labelText: 'Nombre'),
           onSubmitted: (v) => Navigator.of(context).pop(v),
         ),
         actions: [
@@ -251,8 +281,28 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     );
   }
 
+  Future<void> _pickContact(List<Contact> contacts) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _ContactSheet(
+        title: _type == TransactionType.income ? 'Fuente' : 'Contacto',
+        contacts: contacts,
+        selectedId: _contactId,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    if (picked == _newContact) {
+      await _createContact();
+    } else {
+      setState(() => _contactId = picked == _noContact ? null : picked);
+    }
+  }
+
   Future<void> _createContact() async {
-    final name = await _askName('Nuevo contacto', 'Nombre');
+    final name = await _askName('Nuevo contacto');
     if (name == null || !mounted) return;
     try {
       final contact = await ref.read(contactRepositoryProvider).create(ContactInput(name: name));
@@ -263,7 +313,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   }
 
   Future<void> _createTag() async {
-    final name = await _askName('Nueva etiqueta', 'Nombre');
+    final name = await _askName('Nueva etiqueta');
     if (name == null || !mounted) return;
     try {
       final tag = await ref.read(tagRepositoryProvider).create(name);
@@ -287,6 +337,27 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (picked != null) setState(() => _date = dateOnly(picked));
   }
 
+  Future<void> _pickCategory(List<Category> options) async {
+    final pick = await showCategoryPicker(context, categories: options, selectedId: _categoryId);
+    if (pick == null) return;
+    setState(() {
+      _categoryId = pick.id;
+      _errors.remove(ErrorField.category);
+    });
+  }
+
+  String _dateLabel() {
+    final today = ref.read(dayProvider);
+    final diff = DateTime.utc(
+      today.year,
+      today.month,
+      today.day,
+    ).difference(DateTime.utc(_date.year, _date.month, _date.day)).inDays;
+    if (diff == 0) return 'Hoy';
+    if (diff == 1) return 'Ayer';
+    return formatDate(_date);
+  }
+
   // ---------------------------------------------------------------------
   // Interfaz
   // ---------------------------------------------------------------------
@@ -294,6 +365,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountBalancesProvider(true));
+    final accounts = accountsAsync.value == null
+        ? null
+        : {
+            for (final b in accountsAsync.requireValue)
+              if (isPlainAccount(b.account)) b.account.id: b.account,
+          };
+    final noAccounts = accounts != null && accounts.isEmpty;
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar movimiento' : 'Nuevo movimiento'),
@@ -301,33 +379,53 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           if (_isEditing)
             IconButton(
               tooltip: 'Eliminar',
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline_rounded),
               onPressed: _loading ? null : _delete,
             ),
         ],
       ),
+      bottomNavigationBar: _loading || accounts == null || noAccounts
+          ? null
+          : BottomActionBar(
+              child: AppButton(
+                label: _isEditing
+                    ? 'Guardar cambios'
+                    : 'Guardar ${transactionTypeLabel(_type).toLowerCase()}',
+                loading: _saving,
+                onPressed: () => _save(accounts),
+              ),
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : AsyncBody(value: accountsAsync, data: (all) => _buildForm(context, all)),
+          : AsyncBody(
+              value: accountsAsync,
+              data: (_) => noAccounts
+                  ? EmptyState(
+                      icon: Icons.account_balance_wallet_rounded,
+                      title: 'Primero crea una cuenta',
+                      message: 'Necesitas al menos una cuenta para registrar movimientos.',
+                      actionLabel: 'Crear cuenta',
+                      onAction: () => context.push(Routes.accountNew),
+                    )
+                  : _buildForm(context, accounts!),
+            ),
     );
   }
 
-  Widget _buildForm(BuildContext context, List<AccountBalance> all) {
-    final theme = Theme.of(context);
-    final accounts = {
-      for (final b in all)
-        if (isPlainAccount(b.account)) b.account.id: b.account,
-    };
+  Widget _buildForm(BuildContext context, Map<String, Account> accounts) {
+    final c = context.colors;
+    final t = context.text;
+    final brightness = Theme.of(context).brightness;
     final catalogs = [
       ref.watch(categoriesProvider),
       ref.watch(contactsProvider),
       ref.watch(tagsProvider),
     ];
-    final failed = catalogs.where((c) => c.hasError).firstOrNull;
+    final failed = catalogs.where((x) => x.hasError).firstOrNull;
     if (failed != null) return Center(child: Text(describeError(failed.error!)));
     // Los selectores necesitan sus catálogos completos para mostrar el valor
     // que ya tiene el movimiento.
-    if (catalogs.any((c) => !c.hasValue)) {
+    if (catalogs.any((x) => !x.hasValue)) {
       return const Center(child: CircularProgressIndicator());
     }
     final categories = ref.watch(categoriesProvider).requireValue;
@@ -340,242 +438,270 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final crossCurrency =
         isTransfer && source != null && dest != null && source.currency != dest.currency;
 
-    // Solo cuentas activas; se conserva la que ya usa el movimiento al editar.
+    // Solo cuentas activas (más la que ya usa el movimiento al editar); la
+    // última usada va primero.
     bool selectable(Account a) =>
         !a.isArchived || a.id == _existing?.accountId || a.id == _existing?.transferAccountId;
     final selectableAccounts = accounts.values.where(selectable).toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      ..sort((a, b) {
+        if (a.id == _lastUsedId) return -1;
+        if (b.id == _lastUsedId) return 1;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
 
-    final categoriesById = {for (final c in categories) c.id: c};
+    final categoriesById = {for (final x in categories) x.id: x};
     final kind = _type == TransactionType.income ? CategoryKind.income : CategoryKind.expense;
     final visibleCategories =
-        categories.where((c) => c.kind == kind && (!c.isArchived || c.id == _categoryId)).toList()
-          ..sort(
-            (a, b) => categoryLabel(
-              a,
-              categoriesById,
-            ).toLowerCase().compareTo(categoryLabel(b, categoriesById).toLowerCase()),
-          );
-    final visibleContacts = contacts.where((c) => !c.isArchived || c.id == _contactId).toList();
+        categories.where((x) => x.kind == kind && (!x.isArchived || x.id == _categoryId)).toList()
+          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final visibleContacts = contacts.where((x) => !x.isArchived || x.id == _contactId).toList();
     final showCategory = !isTransfer && _existing?.debtId == null;
-
+    final selectedCategory = categoriesById[_categoryId];
+    final categoryStyle = categoryStyleFor(selectedCategory, brightness);
+    final contactName = contacts.where((x) => x.id == _contactId).firstOrNull?.name;
     final general = _errors[ErrorField.general];
+
+    Widget label(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(Space.gutter, Space.xl, Space.gutter, Space.sm),
+      child: Text(text, style: t.label),
+    );
+    Widget padded(Widget w) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+      child: w,
+    );
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.only(top: Space.sm, bottom: Space.xxl),
       children: [
-        if (general != null) ...[
-          Text(general, style: TextStyle(color: theme.colorScheme.error)),
-          const SizedBox(height: 12),
-        ],
-        SegmentedButton<TransactionType>(
-          segments: [
-            for (final t in TransactionType.values)
-              ButtonSegment(value: t, label: Text(transactionTypeLabel(t))),
-          ],
-          selected: {_type},
-          showSelectedIcon: false,
-          // Sin íconos y compacto: en 320 dp "Transferencia" no cabe si no.
-          style: SegmentedButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            textStyle: const TextStyle(fontSize: 13),
+        if (general != null)
+          padded(
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.md),
+              child: Text(general, style: t.caption.copyWith(color: c.danger)),
+            ),
           ),
-          onSelectionChanged: (s) => setState(() {
-            _type = s.first;
-            _errors.clear();
-            if (_type == TransactionType.transfer) {
-              _categoryId = null;
-              _contactId = null;
-            } else {
-              _destinationId = null;
-              _destAmount.clear();
-              final c = categoriesById[_categoryId];
-              if (c != null &&
-                  c.kind !=
-                      (_type == TransactionType.income
-                          ? CategoryKind.income
-                          : CategoryKind.expense)) {
+        padded(
+          TypeSwitcher<TransactionType>(
+            value: _type,
+            options: [
+              for (final ty in [
+                TransactionType.expense,
+                TransactionType.income,
+                TransactionType.transfer,
+              ])
+                (ty, transactionTypeLabel(ty)),
+            ],
+            colorOf: (ty) => transactionTypeColor(context, ty),
+            onChanged: (ty) => setState(() {
+              _type = ty;
+              _errors.clear();
+              if (ty == TransactionType.transfer) {
                 _categoryId = null;
+                _contactId = null;
+              } else {
+                _destinationId = null;
+                _destAmount.clear();
+                final cat = categoriesById[_categoryId];
+                final expected = ty == TransactionType.income
+                    ? CategoryKind.income
+                    : CategoryKind.expense;
+                if (cat != null && cat.kind != expected) _categoryId = null;
               }
-            }
-          }),
+            }),
+          ),
         ),
-        const SizedBox(height: 16),
-        _accountDropdown(
-          keyName: 'field-account',
-          label: isTransfer ? 'Cuenta origen' : 'Cuenta',
-          value: _accountId,
+        const SizedBox(height: Space.xl),
+        padded(
+          AmountInput(
+            controller: _amount,
+            currency: source?.currency,
+            autofocus: !_isEditing,
+            errorText: _errors[ErrorField.amount],
+            onChanged: (_) => _clearError(ErrorField.amount),
+          ),
+        ),
+        if (crossCurrency) ...[
+          const SizedBox(height: Space.lg),
+          padded(Text('Monto que llega', style: t.label, textAlign: TextAlign.center)),
+          padded(
+            AmountInput(
+              controller: _destAmount,
+              currency: dest.currency,
+              label: 'Monto que llega',
+              large: false,
+              errorText: _errors[ErrorField.transferAmount],
+              onChanged: (_) => _clearError(ErrorField.transferAmount),
+            ),
+          ),
+        ],
+        label(isTransfer ? 'DESDE' : 'CUENTA'),
+        AccountChips(
           accounts: selectableAccounts,
+          selectedId: _accountId,
           errorText: _errors[ErrorField.account],
-          onChanged: (id) => setState(() {
+          onSelected: (id) => setState(() {
             _accountId = id;
             _errors.remove(ErrorField.account);
             if (_destinationId == id) _destinationId = null;
           }),
         ),
         if (isTransfer) ...[
-          const SizedBox(height: 16),
-          _accountDropdown(
-            keyName: 'field-destination',
-            label: 'Cuenta destino',
-            value: _destinationId,
+          label('HACIA'),
+          AccountChips(
             accounts: selectableAccounts.where((a) => a.id != _accountId).toList(),
+            selectedId: _destinationId,
             errorText: _errors[ErrorField.destination],
-            onChanged: (id) => setState(() {
+            onSelected: (id) => setState(() {
               _destinationId = id;
               _errors.remove(ErrorField.destination);
             }),
           ),
         ],
-        const SizedBox(height: 16),
-        MoneyTextField(
-          controller: _amount,
-          label: 'Monto',
-          currency: source?.currency,
-          errorText: _errors[ErrorField.amount],
-          textInputAction: TextInputAction.next,
-          onChanged: (_) => _clearError(ErrorField.amount),
-        ),
-        if (crossCurrency) ...[
-          const SizedBox(height: 16),
-          MoneyTextField(
-            controller: _destAmount,
-            label: 'Monto que llega',
-            currency: dest.currency,
-            helperText: 'Las cuentas tienen monedas distintas: indica lo que recibe el destino.',
-            errorText: _errors[ErrorField.transferAmount],
-            onChanged: (_) => _clearError(ErrorField.transferAmount),
-          ),
-        ],
-        if (showCategory) ...[
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String?>(
-            key: Key('field-category-$_type-$_categoryId'),
-            isExpanded: true,
-            initialValue: visibleCategories.any((c) => c.id == _categoryId) ? _categoryId : null,
-            decoration: InputDecoration(
-              labelText: 'Categoría',
-              errorText: _errors[ErrorField.category],
-            ),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Sin categoría')),
-              for (final c in visibleCategories)
-                DropdownMenuItem(
-                  value: c.id,
-                  child: Text(categoryLabel(c, categoriesById), overflow: TextOverflow.ellipsis),
+        const SizedBox(height: Space.xl),
+        padded(
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                if (showCategory) ...[
+                  PickerRow(
+                    label: 'Categoría',
+                    value: selectedCategory == null
+                        ? 'Elegir categoría'
+                        : categoryLabel(selectedCategory, categoriesById),
+                    placeholder: selectedCategory == null,
+                    errorText: _errors[ErrorField.category],
+                    leading: CategoryAvatar(
+                      icon: categoryStyle.icon,
+                      color: categoryStyle.color,
+                      size: 36,
+                    ),
+                    onTap: () => _pickCategory(visibleCategories),
+                  ),
+                  Divider(color: c.border),
+                ],
+                PickerRow(
+                  label: 'Fecha',
+                  value: _dateLabel(),
+                  leading: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Icon(Icons.calendar_today_rounded, color: c.textSecondary, size: 22),
+                  ),
+                  onTap: _pickDate,
                 ),
-            ],
-            onChanged: (id) => setState(() {
-              _categoryId = id;
-              _errors.remove(ErrorField.category);
-            }),
-          ),
-        ],
-        if (!isTransfer) ...[
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String?>(
-            key: Key('field-contact-$_contactId-${visibleContacts.length}'),
-            isExpanded: true,
-            initialValue: visibleContacts.any((c) => c.id == _contactId) ? _contactId : null,
-            decoration: InputDecoration(
-              labelText: _type == TransactionType.income ? 'Fuente' : 'Contacto',
+              ],
             ),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Ninguno')),
-              for (final c in visibleContacts)
-                DropdownMenuItem(
-                  value: c.id,
-                  child: Text(c.name, overflow: TextOverflow.ellipsis),
-                ),
-              const DropdownMenuItem(value: _createNew, child: Text('Nuevo contacto…')),
-            ],
-            onChanged: (id) {
-              if (id == _createNew) {
-                _createContact();
-              } else {
-                setState(() => _contactId = id);
-              }
-            },
-          ),
-        ],
-        const SizedBox(height: 16),
-        InkWell(
-          onTap: _pickDate,
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Fecha',
-              suffixIcon: Icon(Icons.calendar_today_outlined),
-            ),
-            child: Text(formatDate(_date)),
           ),
         ),
-        const SizedBox(height: 16),
-        Text('Etiquetas', style: theme.textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            for (final t in tags.where((t) => !t.isArchived || _tagIds.contains(t.id)))
-              FilterChip(
-                label: Text(t.name),
-                selected: _tagIds.contains(t.id),
-                onSelected: (on) => setState(() {
-                  _tagIds = on ? {..._tagIds, t.id} : ({..._tagIds}..remove(t.id));
-                }),
+        const SizedBox(height: Space.sm),
+        padded(
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => setState(() => _moreOpen = !_moreOpen),
+              icon: Icon(_moreOpen ? Icons.expand_less_rounded : Icons.expand_more_rounded),
+              label: Text(_moreOpen ? 'Menos detalles' : 'Más detalles'),
+            ),
+          ),
+        ),
+        if (_moreOpen) ...[
+          if (!isTransfer)
+            padded(
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: PickerRow(
+                  label: _type == TransactionType.income ? 'Fuente' : 'Contacto',
+                  value: contactName ?? 'Ninguno',
+                  placeholder: contactName == null,
+                  leading: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Icon(Icons.person_outline_rounded, color: c.textSecondary, size: 22),
+                  ),
+                  onTap: () => _pickContact(visibleContacts),
+                ),
               ),
-            ActionChip(
-              avatar: const Icon(Icons.add, size: 18),
-              label: const Text('Nueva etiqueta'),
-              onPressed: _createTag,
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _note,
-          minLines: 1,
-          maxLines: 3,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Nota'),
-        ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: _saving ? null : () => _save(accounts),
-          child: Text(
-            _isEditing ? 'Guardar cambios' : 'Guardar ${transactionTypeLabel(_type).toLowerCase()}',
+          label('ETIQUETAS'),
+          padded(
+            Wrap(
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: [
+                for (final tag in tags.where((x) => !x.isArchived || _tagIds.contains(x.id)))
+                  FilterChip(
+                    label: Text(tag.name),
+                    selected: _tagIds.contains(tag.id),
+                    showCheckmark: false,
+                    onSelected: (on) => setState(() {
+                      _tagIds = on ? {..._tagIds, tag.id} : ({..._tagIds}..remove(tag.id));
+                    }),
+                  ),
+                ActionChip(
+                  avatar: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Nueva etiqueta'),
+                  onPressed: _createTag,
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: Space.lg),
+          padded(
+            TextField(
+              controller: _note,
+              minLines: 1,
+              maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Nota'),
+            ),
+          ),
+        ],
       ],
     );
   }
+}
 
-  Widget _accountDropdown({
-    required String keyName,
-    required String label,
-    required String? value,
-    required List<Account> accounts,
-    required String? errorText,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      key: Key('$keyName-$value'),
-      isExpanded: true,
-      initialValue: accounts.any((a) => a.id == value) ? value : null,
-      decoration: InputDecoration(labelText: label, errorText: errorText),
-      items: [
-        for (final a in accounts)
-          DropdownMenuItem(
-            value: a.id,
-            child: Text(
-              '${a.name} · ${accountTypeLabel(a.type)} (${a.currency})',
-              overflow: TextOverflow.ellipsis,
-            ),
+/// Hoja con los contactos para elegir uno, quitarlo o crear otro.
+class _ContactSheet extends StatelessWidget {
+  const _ContactSheet({required this.title, required this.contacts, required this.selectedId});
+
+  final String title;
+  final List<Contact> contacts;
+  final String? selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final t = context.text;
+    Widget row(String text, String value, {IconData? icon, bool selected = false}) => ListTile(
+      minTileHeight: kMinTap + 8,
+      leading: Icon(icon ?? Icons.person_outline_rounded, color: c.textSecondary),
+      title: Text(text, style: t.bodyStrong),
+      trailing: selected ? Icon(Icons.check_rounded, color: c.accent) : null,
+      onTap: () => Navigator.of(context).pop(value),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.sm),
+          child: Text(title, style: t.heading),
+        ),
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              row('Ninguno', _noContact, icon: Icons.block_rounded, selected: selectedId == null),
+              for (final ct in contacts) row(ct.name, ct.id, selected: ct.id == selectedId),
+              row('Nuevo contacto…', _newContact, icon: Icons.add_rounded),
+            ],
           ),
+        ),
+        const SizedBox(height: Space.lg),
       ],
-      onChanged: onChanged,
     );
   }
 }

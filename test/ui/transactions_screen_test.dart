@@ -1,5 +1,6 @@
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/data/database/app_database.dart';
+import 'package:finanzas/data/repositories/models.dart';
 import 'package:finanzas/ui/design/transaction_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -208,7 +209,12 @@ void main() {
 
       await tester.tap(find.text('Nuevo movimiento'));
       await tester.pumpAndSettle();
-      expect(find.text('Mi banco · Cuenta bancaria (GTQ)'), findsOneWidget);
+      // La cuenta filtrada viene elegida: se puede guardar sin tocar las cuentas.
+      await enterAmount(tester, '7.77');
+      await tester.tap(find.text('Guardar gasto'));
+      await tester.pumpAndSettle();
+      final saved = await env.transactions.list(const TransactionFilter());
+      expect(saved.where((t) => t.amountMinor == 777).single.accountId, bank.id);
       await unmountApp(tester);
     });
   });

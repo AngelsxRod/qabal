@@ -139,7 +139,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Editar movimiento'), findsOneWidget);
-    expect(tester.widget<TextField>(field('Monto')).controller!.text, '5.00');
+    expect(amountText(tester), '5.00');
     await unmountApp(tester);
   });
 

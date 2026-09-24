@@ -1,6 +1,9 @@
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/data/database/app_database.dart';
 import 'package:finanzas/data/repositories/models.dart';
+import 'package:finanzas/ui/design/account_chips.dart';
+import 'package:finanzas/ui/design/amount_input.dart';
+import 'package:finanzas/ui/design/picker_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,9 +14,6 @@ void main() {
   late TestEnv env;
   late Account cash;
   late Account bank;
-
-  const cashLabel = 'Mi caja · Efectivo (GTQ)';
-  const bankLabel = 'Mi banco · Cuenta bancaria (GTQ)';
 
   setUp(() async {
     env = TestEnv(DateTime(2026, 9, 1, 10));
@@ -28,28 +28,67 @@ void main() {
   }
 
   Future<int> balanceOf(Account a) async => (await env.accounts.balance(a.id)).balanceMinor;
+  Future<List<Transaction>> all() => env.transactions.list(const TransactionFilter());
 
-  testWidgets('registra un gasto con categoría, nota y coma decimal', (tester) async {
+  testWidgets('registra un gasto con categoría y nota; el monto se formatea al escribir', (
+    tester,
+  ) async {
     await openNew(tester);
     expect(find.text('Nuevo movimiento'), findsOneWidget);
+    // El monto es lo primero y tiene el foco al abrir.
+    expect(tester.widget<TextField>(amountField()).autofocus, isTrue);
 
-    await pick(tester, 'Cuenta', cashLabel);
-    await tester.enterText(field('Monto'), '45,50');
-    await pick(tester, 'Categoría', 'Comida');
-    await tester.enterText(field('Nota'), 'Almuerzo');
+    await chooseAccount(tester, 'Mi caja');
+    await enterAmount(tester, '1234,50');
+    expect(amountText(tester), '1,234.50');
+    await chooseCategory(tester, 'Comida');
+    await openMoreDetails(tester);
+    await tester.enterText(find.widgetWithText(TextField, 'Nota'), 'Almuerzo');
     await tester.tap(find.text('Guardar gasto'));
     await tester.pumpAndSettle();
 
-    final tx = (await env.transactions.list(const TransactionFilter())).single;
+    final tx = (await all()).single;
     expect(tx.type, TransactionType.expense);
     expect(tx.accountId, cash.id);
-    expect(tx.amountMinor, 4550);
+    expect(tx.amountMinor, 123450);
     expect(tx.categoryId, 'default:food');
     expect(tx.note, 'Almuerzo');
     expect(tx.occurredAt, DateTime(2026, 9, 1));
-    expect(await balanceOf(cash), 10000 - 4550);
+    expect(await balanceOf(cash), 10000 - 123450);
     // Volvió a la pantalla anterior.
     expect(find.text('Guardar gasto'), findsNothing);
+    await unmountApp(tester);
+  });
+
+  testWidgets('la última cuenta usada va primero y viene preseleccionada', (tester) async {
+    await env.expense(bank.id, 100, DateTime(2026, 8, 30));
+    await openNew(tester);
+
+    final chipsFinder = find.byType(AccountChips);
+    final bankX = tester
+        .getTopLeft(find.descendant(of: chipsFinder, matching: find.text('Mi banco')))
+        .dx;
+    final cashX = tester
+        .getTopLeft(find.descendant(of: chipsFinder, matching: find.text('Mi caja')))
+        .dx;
+    expect(bankX, lessThan(cashX)); // aunque "Mi caja" gane alfabéticamente
+
+    // Sin elegir cuenta, el gasto se registra en la última usada.
+    await enterAmount(tester, '5');
+    await tester.tap(find.text('Guardar gasto'));
+    await tester.pumpAndSettle();
+    expect((await all()).first.accountId, bank.id);
+    await unmountApp(tester);
+  });
+
+  testWidgets('sin movimientos previos no hay cuenta preseleccionada', (tester) async {
+    await openNew(tester);
+    await enterAmount(tester, '5');
+    await tester.tap(find.text('Guardar gasto'));
+    await tester.pumpAndSettle();
+
+    expect(chipsError('Elige una cuenta'), findsOneWidget);
+    expect(await all(), isEmpty);
     await unmountApp(tester);
   });
 
@@ -58,27 +97,33 @@ void main() {
   ) async {
     await openNew(tester, accountId: bank.id, type: TransactionType.income);
 
-    expect(find.text('Fuente'), findsOneWidget);
-    expect(find.text('Contacto'), findsNothing);
-
-    await tester.tap(dropdown('Categoría'));
+    await tester.tap(find.text('Categoría'));
     await tester.pumpAndSettle();
     expect(find.text('Sueldo'), findsOneWidget);
     expect(find.text('Comida'), findsNothing);
     await tester.tap(find.text('Sueldo'));
     await tester.pumpAndSettle();
 
-    // Crea la fuente al vuelo.
-    await pick(tester, 'Fuente', 'Nuevo contacto…');
+    await openMoreDetails(tester);
+    expect(find.text('Fuente'), findsOneWidget);
+    expect(find.text('Contacto'), findsNothing);
+
+    // Crea la fuente al vuelo desde la hoja de contactos.
+    await tester.tap(find.text('Fuente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nuevo contacto…'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Empresa SA');
     await tester.tap(find.text('Crear'));
     await tester.pumpAndSettle();
+    expect(find.text('Empresa SA'), findsOneWidget);
 
-    await tester.enterText(field('Monto'), '3,500.00');
+    await enterAmount(tester, '3,500.00');
+    expect(amountText(tester), '3,500.00');
     await tester.tap(find.text('Guardar ingreso'));
     await tester.pumpAndSettle();
 
-    final tx = (await env.transactions.list(const TransactionFilter())).single;
+    final tx = (await all()).single;
     expect(tx.type, TransactionType.income);
     expect(tx.accountId, bank.id);
     expect(tx.amountMinor, 350000);
@@ -94,12 +139,13 @@ void main() {
     tester,
   ) async {
     await openNew(tester, accountId: cash.id);
-    await pick(tester, 'Categoría', 'Comida');
+    await chooseCategory(tester, 'Comida');
+    expect(find.text('Comida'), findsOneWidget);
 
     await tester.tap(find.text('Ingreso'));
     await tester.pumpAndSettle();
     expect(find.text('Comida'), findsNothing);
-    expect(find.text('Sin categoría'), findsOneWidget);
+    expect(find.text('Elegir categoría'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -107,25 +153,26 @@ void main() {
     await openNew(tester, accountId: bank.id, type: TransactionType.transfer);
 
     // Una transferencia no lleva categoría ni contacto.
+    expect(find.byType(PickerRow), findsOneWidget); // solo la fecha
     expect(find.text('Categoría'), findsNothing);
+    await openMoreDetails(tester);
     expect(find.text('Contacto'), findsNothing);
     expect(find.text('Fuente'), findsNothing);
 
-    await pick(tester, 'Cuenta destino', cashLabel);
-    // El origen ya no se ofrece como destino.
-    await tester.tap(dropdown('Cuenta destino'));
-    await tester.pumpAndSettle();
-    expect(find.text(bankLabel), findsOneWidget); // solo el origen elegido
-    await tester.tap(find.text(cashLabel).last);
-    await tester.pumpAndSettle();
+    // El origen no se ofrece como destino.
+    expect(
+      find.descendant(of: find.byType(AccountChips).at(1), matching: find.text('Mi banco')),
+      findsNothing,
+    );
+    await chooseAccount(tester, 'Mi caja', group: 1);
 
-    await tester.enterText(field('Monto'), '300');
+    await enterAmount(tester, '300');
     // Misma moneda: no pide monto de llegada.
     expect(find.text('Monto que llega'), findsNothing);
     await tester.tap(find.text('Guardar transferencia'));
     await tester.pumpAndSettle();
 
-    final tx = (await env.transactions.list(const TransactionFilter())).single;
+    final tx = (await all()).single;
     expect(tx.type, TransactionType.transfer);
     expect(tx.accountId, bank.id);
     expect(tx.transferAccountId, cash.id);
@@ -140,93 +187,115 @@ void main() {
     final usd = await env.cash(name: 'Dólares', currency: 'USD');
     await openNew(tester, accountId: bank.id, type: TransactionType.transfer);
 
-    await pick(tester, 'Cuenta destino', 'Dólares · Efectivo (USD)');
+    await chooseAccount(tester, 'Dólares', group: 1);
     expect(find.text('Monto que llega'), findsOneWidget);
 
-    await tester.enterText(field('Monto'), '780');
+    await enterAmount(tester, '780');
     await tester.tap(find.text('Guardar transferencia'));
     await tester.pumpAndSettle();
     // Falta el monto que llega: el error queda en ese campo y no se guarda.
-    expect(errorOf(tester, 'Monto que llega'), 'Escribe el monto que llega');
-    expect(await env.transactions.list(const TransactionFilter()), isEmpty);
+    expect(errorIn(find.byType(AmountInput).at(1), 'Escribe el monto que llega'), findsOneWidget);
+    expect(errorIn(find.byType(AmountInput).at(0), 'Escribe el monto que llega'), findsNothing);
+    expect(await all(), isEmpty);
 
-    await tester.enterText(field('Monto que llega'), '100');
+    await enterAmount(tester, '100', index: 1);
     await tester.tap(find.text('Guardar transferencia'));
     await tester.pumpAndSettle();
 
-    final tx = (await env.transactions.list(const TransactionFilter())).single;
+    final tx = (await all()).single;
     expect(tx.amountMinor, 78000);
     expect(tx.transferAmountMinor, 10000);
     expect(await balanceOf(usd), 10000);
     await unmountApp(tester);
   });
 
-  testWidgets('validaciones del formulario: cuenta, monto y destino obligatorios', (tester) async {
+  testWidgets('cada error de validación aparece bajo su campo', (tester) async {
     await openNew(tester);
     await tester.tap(find.text('Guardar gasto'));
     await tester.pumpAndSettle();
-    expect(errorOf(tester, 'Cuenta'), 'Elige una cuenta');
-    expect(errorOf(tester, 'Monto'), 'Escribe un monto');
+    expect(chipsError('Elige una cuenta'), findsOneWidget);
+    expect(errorIn(find.byType(AmountInput).first, 'Escribe un monto'), findsOneWidget);
 
     await tester.tap(find.text('Transferencia'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar transferencia'));
     await tester.pumpAndSettle();
-    expect(errorOf(tester, 'Cuenta destino'), 'Elige la cuenta destino');
-
-    await tester.enterText(field('Monto'), '1,234');
-    await tester.tap(find.text('Guardar transferencia'));
-    await tester.pumpAndSettle();
-    expect(errorOf(tester, 'Monto'), contains('Monto inválido'));
-    expect(await env.transactions.list(const TransactionFilter()), isEmpty);
+    expect(chipsError('Elige la cuenta destino', group: 1), findsOneWidget);
+    expect(chipsError('Elige la cuenta destino', group: 0), findsNothing);
+    expect(await all(), isEmpty);
     await unmountApp(tester);
   });
 
-  testWidgets('un monto en cero lo rechaza el dominio y el error queda en Monto', (tester) async {
+  testWidgets('un monto en cero lo rechaza el dominio y el error queda en el monto', (
+    tester,
+  ) async {
     await openNew(tester, accountId: cash.id);
-    await tester.enterText(field('Monto'), '0');
+    await enterAmount(tester, '0');
     await tester.tap(find.text('Guardar gasto'));
     await tester.pumpAndSettle();
 
-    expect(errorOf(tester, 'Monto'), 'El monto debe ser mayor que cero');
-    expect(errorOf(tester, 'Cuenta'), isNull);
-    expect(await env.transactions.list(const TransactionFilter()), isEmpty);
+    expect(
+      errorIn(find.byType(AmountInput).first, 'El monto debe ser mayor que cero'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Elige una cuenta'), findsNothing);
+    expect(await all(), isEmpty);
 
-    await tester.enterText(field('Monto'), '5');
-    await tester.pump();
-    expect(errorOf(tester, 'Monto'), isNull);
+    await enterAmount(tester, '5');
+    expect(find.text('El monto debe ser mayor que cero'), findsNothing);
     await unmountApp(tester);
   });
 
-  testWidgets('una cuenta archivada mientras se llena el formulario marca el campo Cuenta', (
+  testWidgets('una cuenta archivada mientras se llena el formulario marca las cuentas', (
     tester,
   ) async {
     await openNew(tester);
-    await pick(tester, 'Cuenta', cashLabel);
-    await tester.enterText(field('Monto'), '10');
+    await chooseAccount(tester, 'Mi caja');
+    await enterAmount(tester, '10');
 
     // La cuenta se archiva por otro lado antes de guardar.
     await env.accounts.update(cash.id, isArchived: true);
     await tester.tap(find.text('Guardar gasto'));
     await tester.pumpAndSettle();
 
-    expect(errorOf(tester, 'Cuenta'), contains('archivada'));
-    expect(errorOf(tester, 'Monto'), isNull);
-    expect(await env.transactions.list(const TransactionFilter()), isEmpty);
+    expect(
+      find.descendant(
+        of: find.byType(AccountChips).first,
+        matching: find.textContaining('archivada'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: find.byType(AmountInput), matching: find.textContaining('archivada')),
+      findsNothing,
+    );
+    expect(await all(), isEmpty);
     await unmountApp(tester);
   });
 
-  testWidgets('una cuenta destino archivada marca el campo Cuenta destino', (tester) async {
+  testWidgets('una cuenta destino archivada marca el destino, no el origen', (tester) async {
     await openNew(tester, accountId: bank.id, type: TransactionType.transfer);
-    await pick(tester, 'Cuenta destino', cashLabel);
-    await tester.enterText(field('Monto'), '10');
+    await chooseAccount(tester, 'Mi caja', group: 1);
+    await enterAmount(tester, '10');
 
     await env.accounts.update(cash.id, isArchived: true);
     await tester.tap(find.text('Guardar transferencia'));
     await tester.pumpAndSettle();
 
-    expect(errorOf(tester, 'Cuenta destino'), contains('archivada'));
-    expect(errorOf(tester, 'Cuenta origen'), isNull);
+    expect(
+      find.descendant(
+        of: find.byType(AccountChips).at(1),
+        matching: find.textContaining('archivada'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AccountChips).at(0),
+        matching: find.textContaining('archivada'),
+      ),
+      findsNothing,
+    );
     await unmountApp(tester);
   });
 
@@ -234,10 +303,26 @@ void main() {
     await env.accounts.update(bank.id, isArchived: true);
     await openNew(tester);
 
-    await tester.tap(dropdown('Cuenta'));
+    final chips = find.byType(AccountChips);
+    expect(find.descendant(of: chips, matching: find.text('Mi caja')), findsOneWidget);
+    expect(find.descendant(of: chips, matching: find.text('Mi banco')), findsNothing);
+    await unmountApp(tester);
+  });
+
+  testWidgets('sin cuentas invita a crear una en lugar de mostrar un formulario vacío', (
+    tester,
+  ) async {
+    // Una base aparte, sin ninguna cuenta.
+    final empty = TestEnv(DateTime(2026, 9, 1, 10));
+    addTearDown(empty.close);
+    await pumpApp(tester, empty, location: Routes.transactions);
+    await pushRoute(tester, Routes.transactionNew);
+
+    expect(find.text('Primero crea una cuenta'), findsOneWidget);
+    expect(find.text('Guardar gasto'), findsNothing);
+    await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
-    expect(find.text(cashLabel), findsOneWidget);
-    expect(find.text(bankLabel), findsNothing);
+    expect(find.text('Nueva cuenta'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -268,14 +353,19 @@ void main() {
       await openEdit(tester);
 
       expect(find.text('Editar movimiento'), findsOneWidget);
-      expect(tester.widget<TextField>(field('Monto')).controller!.text, '25.00');
-      expect(tester.widget<TextField>(field('Nota')).controller!.text, 'Taxi');
+      expect(amountText(tester), '25.00');
+      expect(tester.widget<TextField>(amountField()).autofocus, isFalse);
       expect(find.text('Transporte'), findsOneWidget);
       expect(find.text('30 ago 2026'), findsOneWidget);
+      // Tiene nota y etiqueta: "Más detalles" ya viene desplegado.
+      expect(
+        tester.widget<TextField>(find.widgetWithText(TextField, 'Nota')).controller!.text,
+        'Taxi',
+      );
       expect(tester.widget<FilterChip>(find.byType(FilterChip)).selected, isTrue);
 
-      await tester.enterText(field('Monto'), '31.75');
-      await pick(tester, 'Categoría', 'Comida');
+      await enterAmount(tester, '31.75');
+      await chooseCategory(tester, 'Comida');
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
 
@@ -290,12 +380,27 @@ void main() {
       await unmountApp(tester);
     });
 
+    testWidgets('la fecha de hoy y de ayer se muestran con su nombre', (tester) async {
+      final today = await env.expense(cash.id, 100, DateTime(2026, 9, 1));
+      final yesterday = await env.expense(cash.id, 100, DateTime(2026, 8, 31));
+      await pumpApp(tester, env, location: Routes.transactions);
+
+      await pushRoute(tester, Routes.transactionEdit(today.id));
+      expect(find.text('Hoy'), findsOneWidget);
+      await unmountApp(tester);
+
+      await pumpApp(tester, env, location: Routes.transactions);
+      await pushRoute(tester, Routes.transactionEdit(yesterday.id));
+      expect(find.text('Ayer'), findsOneWidget);
+      await unmountApp(tester);
+    });
+
     testWidgets('permite cambiar el tipo a transferencia', (tester) async {
       await openEdit(tester);
 
       await tester.tap(find.text('Transferencia'));
       await tester.pumpAndSettle();
-      await pick(tester, 'Cuenta destino', bankLabel);
+      await chooseAccount(tester, 'Mi banco', group: 1);
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
 
@@ -354,7 +459,8 @@ void main() {
 
       // Los movimientos de deuda no llevan categoría.
       expect(find.text('Categoría'), findsNothing);
-      await tester.enterText(field('Nota'), 'Con nota');
+      await openMoreDetails(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Nota'), 'Con nota');
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
 
