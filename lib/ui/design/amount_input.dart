@@ -5,6 +5,9 @@ import '../../core/format/money_input.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
+/// Mensaje para un monto que no se pudo leer.
+const invalidAmountMessage = 'Monto inválido. Escribe por ejemplo 1,234.50';
+
 /// Campo de monto protagonista: cifras grandes centradas, con el símbolo de
 /// la moneda y separador de miles en vivo (`12,500.00`). Se lee con
 /// `parseInputMinor`.
@@ -59,28 +62,30 @@ class AmountInput extends StatelessWidget {
               if (currency != null) const SizedBox(width: Space.sm),
               // El ancho sigue al texto para que el símbolo quede pegado a las
               // cifras mientras se escribe.
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 96, maxWidth: 240),
-                child: IntrinsicWidth(
-                  child: TextField(
-                    controller: controller,
-                    autofocus: autofocus,
-                    onChanged: onChanged,
-                    textAlign: TextAlign.center,
-                    style: style,
-                    cursorColor: c.accent,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: const [MoneyInputFormatter()],
-                    decoration: InputDecoration(
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      hintText: '0.00',
-                      hintStyle: style.copyWith(color: c.textTertiary.withValues(alpha: 0.5)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: Space.sm),
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 96, maxWidth: 240),
+                  child: IntrinsicWidth(
+                    child: TextField(
+                      controller: controller,
+                      autofocus: autofocus,
+                      onChanged: onChanged,
+                      textAlign: TextAlign.center,
+                      style: style,
+                      cursorColor: c.accent,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: const [MoneyInputFormatter()],
+                      decoration: InputDecoration(
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        hintText: '0.00',
+                        hintStyle: style.copyWith(color: c.textTertiary.withValues(alpha: 0.5)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: Space.sm),
+                      ),
                     ),
                   ),
                 ),
