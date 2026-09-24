@@ -21,20 +21,32 @@ Future<CategoryPick?> showCategoryPicker(
   required List<Category> categories,
   required String? selectedId,
   String title = 'Categoría',
+  String noneLabel = 'Sin categoría',
 }) => showModalBottomSheet<CategoryPick>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
-  builder: (_) => _CategoryGrid(categories: categories, selectedId: selectedId, title: title),
+  builder: (_) => _CategoryGrid(
+    categories: categories,
+    selectedId: selectedId,
+    title: title,
+    noneLabel: noneLabel,
+  ),
 );
 
 class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({required this.categories, required this.selectedId, required this.title});
+  const _CategoryGrid({
+    required this.categories,
+    required this.selectedId,
+    required this.title,
+    required this.noneLabel,
+  });
 
   final List<Category> categories;
   final String? selectedId;
   final String title;
+  final String noneLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +55,7 @@ class _CategoryGrid extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final items = <Widget>[
       _Cell(
-        label: 'Sin categoría',
+        label: noneLabel,
         selected: selectedId == null,
         style: categoryStyleFor(null, brightness),
         onTap: () => Navigator.of(context).pop(const CategoryPick(null)),

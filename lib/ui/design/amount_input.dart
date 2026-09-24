@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
 /// Campo de monto protagonista: cifras grandes centradas, con el símbolo de
-/// la moneda. Solo deja escribir dígitos, punto y coma; la interpretación es
-/// de `parseMinor`.
+/// la moneda y separador de miles en vivo (`12,500.00`). Se lee con
+/// `parseInputMinor`.
 class AmountInput extends StatelessWidget {
   const AmountInput({
     super.key,
@@ -18,6 +18,7 @@ class AmountInput extends StatelessWidget {
     this.autofocus = false,
     this.onChanged,
     this.color,
+    this.large = true,
   });
 
   final TextEditingController controller;
@@ -30,11 +31,14 @@ class AmountInput extends StatelessWidget {
   /// Color de las cifras (p. ej. el del tipo de movimiento).
   final Color? color;
 
+  /// Cifras de 40 sp (el monto principal) o de 28 sp (montos secundarios).
+  final bool large;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final t = context.text;
-    final style = t.amountXL.copyWith(color: color ?? c.textPrimary);
+    final style = (large ? t.amountXL : t.amountL).copyWith(color: color ?? c.textPrimary);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -56,7 +60,7 @@ class AmountInput extends StatelessWidget {
               // El ancho sigue al texto para que el símbolo quede pegado a las
               // cifras mientras se escribe.
               ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 96, maxWidth: 220),
+                constraints: const BoxConstraints(minWidth: 96, maxWidth: 240),
                 child: IntrinsicWidth(
                   child: TextField(
                     controller: controller,
@@ -66,7 +70,7 @@ class AmountInput extends StatelessWidget {
                     style: style,
                     cursorColor: c.accent,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                    inputFormatters: const [MoneyInputFormatter()],
                     decoration: InputDecoration(
                       filled: false,
                       border: InputBorder.none,

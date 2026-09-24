@@ -13,6 +13,7 @@ import 'category_picker.dart';
 import 'category_style.dart';
 import 'day_header.dart';
 import 'empty_state.dart';
+import 'picker_row.dart';
 import 'tokens.dart';
 import 'transaction_row.dart';
 import 'type_switcher.dart';
@@ -67,6 +68,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
     _acc('a1', 'Efectivo', AccountType.cash),
     _acc('a2', 'Banrural', AccountType.bank),
     _acc('a3', 'Ahorros', AccountType.savings),
+    _acc('a4', 'Dólares', AccountType.other),
+    _acc('a5', 'Viajes', AccountType.savings),
   ];
 
   static final _categories = [
@@ -205,7 +208,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             AccountChips(
               accounts: _accounts,
               selectedId: _account,
-              onSelected: (id) => setState(() => _account = id),
+              onSelected: (id) => setState(() => _account = id ?? _account),
             ),
           ),
           section(
@@ -279,12 +282,38 @@ class _GalleryScreenState extends State<GalleryScreen> {
             padded(
               Column(
                 children: [
-                  const TextField(decoration: InputDecoration(labelText: 'Nombre')),
-                  const SizedBox(height: Space.md),
                   const TextField(
                     decoration: InputDecoration(
-                      labelText: 'Nota',
+                      labelText: 'Nombre',
                       errorText: 'El nombre no puede estar vacío',
+                    ),
+                  ),
+                  const SizedBox(height: Space.md),
+                  const TextField(decoration: InputDecoration(labelText: 'Nota')),
+                  const SizedBox(height: Space.md),
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        PickerRow(
+                          label: 'Categoría',
+                          value: 'Comida',
+                          leading: CategoryAvatar(
+                            icon: categoryStyleFor(_categories.first, brightness).icon,
+                            color: categoryStyleFor(_categories.first, brightness).color,
+                            size: 36,
+                          ),
+                          onTap: () {},
+                        ),
+                        Divider(color: c.border),
+                        PickerRow(
+                          label: 'Fecha',
+                          value: 'Hoy',
+                          leading: Icon(Icons.calendar_today_rounded, color: c.textSecondary),
+                          onTap: () {},
+                          errorText: 'Fecha inválida',
+                        ),
+                      ],
                     ),
                   ),
                 ],
