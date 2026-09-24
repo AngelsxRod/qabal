@@ -5,17 +5,33 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'date_only_converter.dart';
 import 'tables/accounts.dart';
 import 'tables/categories.dart';
+import 'tables/contacts.dart';
+import 'tables/credit_card_details.dart';
+import 'tables/credit_card_statements.dart';
+import 'tables/debts.dart';
 import 'tables/enums.dart';
 import 'tables/ids.dart';
+import 'tables/tags.dart';
 import 'tables/transactions.dart';
 
 export 'tables/enums.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions])
+@DriftDatabase(tables: [
+  Accounts,
+  Categories,
+  Transactions,
+  CreditCardDetails,
+  CreditCardStatements,
+  Contacts,
+  Debts,
+  Tags,
+  TransactionTags,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
