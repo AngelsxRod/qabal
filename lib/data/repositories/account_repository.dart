@@ -21,7 +21,7 @@ class AccountRepository {
   /// CONVENCIÓN DE SIGNO: en tarjetas `input.initialBalanceMinor` es
   /// **negativo** si ya hay deuda (deuda 500.00 → `-50000`). La UI debe
   /// convertir desde un valor de "deuda actual" positivo.
-  Future<Account> create(AccountInput input, {CreditCardSettings? card}) {
+  Future<Account> create(AccountInput input, {CreditCardSettings? card}) async {
     final name = requireText(input.name, 'El nombre');
     final currency = normalizeCurrency(input.currency);
     final isCard = input.type == AccountType.creditCard;

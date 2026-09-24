@@ -12,7 +12,7 @@ class ContactRepository {
   final AppDatabase _db;
   final Now _now;
 
-  Future<Contact> create(ContactInput input) {
+  Future<Contact> create(ContactInput input) async {
     final n = _now();
     return _db.into(_db.contacts).insertReturning(
           ContactsCompanion.insert(
