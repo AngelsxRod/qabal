@@ -11,6 +11,10 @@ import '../data/repositories/tag_repository.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../domain/clock.dart';
 
+// Las pantallas importan solo este archivo: además de los providers, traen
+// las entidades y modelos de la capa de datos que necesitan.
+export '../data/database/app_database.dart';
+export '../data/repositories/models.dart';
 export 'day.dart';
 
 /// Base de datos única de la app. Se crea en `main()` y se inyecta con
