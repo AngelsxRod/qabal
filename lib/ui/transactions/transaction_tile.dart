@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../../app/providers.dart';
+import '../design/amount_text.dart';
+import '../design/category_style.dart';
 import '../design/tokens.dart';
-import '../../core/format/money.dart';
+import '../design/transaction_row.dart';
 import 'transaction_labels.dart';
+
+/// Efecto de un movimiento sobre el saldo, en la moneda que corresponde.
+/// Devuelve `null` si no afecta la vista (transferencia en la lista general).
+({int minor, String currency})? transactionEffect(
+  Transaction tx,
+  Map<String, Account> accounts,
+  String? perspectiveAccountId,
+) {
+  final source = accounts[tx.accountId];
+  final dest = tx.transferAccountId == null ? null : accounts[tx.transferAccountId];
+  if (tx.type == TransactionType.transfer) {
+    if (perspectiveAccountId == null) return null;
+    if (tx.transferAccountId == perspectiveAccountId) {
+      return (minor: tx.transferAmountMinor ?? tx.amountMinor, currency: dest?.currency ?? '');
+    }
+    return (minor: -tx.amountMinor, currency: source?.currency ?? '');
+  }
+  final signed = tx.type == TransactionType.income ? tx.amountMinor : -tx.amountMinor;
+  return (minor: signed, currency: source?.currency ?? '');
+}
 
 /// Fila de un movimiento.
 ///
@@ -30,22 +52,31 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = transaction;
-    final theme = Theme.of(context);
-    final colors = context.colors;
+    final c = context.colors;
+    final brightness = Theme.of(context).brightness;
     final source = accounts[tx.accountId];
     final dest = tx.transferAccountId == null ? null : accounts[tx.transferAccountId];
     final isTransfer = tx.type == TransactionType.transfer;
     final incoming =
         isTransfer && perspectiveAccountId != null && tx.transferAccountId == perspectiveAccountId;
 
-    String title;
+    late final String title;
+    late final IconData icon;
+    late final Color iconColor;
     if (isTransfer) {
       title = 'Transferencia';
+      icon = transferIcon;
+      iconColor = c.transfer;
     } else if (tx.debtId != null) {
       title = 'Movimiento de deuda';
+      icon = Icons.handshake_rounded;
+      iconColor = c.textSecondary;
     } else {
       final category = categories[tx.categoryId];
       title = category == null ? 'Sin categoría' : categoryLabel(category, categories);
+      final style = categoryStyleFor(category, brightness);
+      icon = style.icon;
+      iconColor = style.color;
     }
 
     final details = <String>[
@@ -58,41 +89,26 @@ class TransactionTile extends StatelessWidget {
       if (tx.note != null && tx.note!.isNotEmpty) tx.note!,
     ];
 
-    // Monto y color.
-    final String amountText;
-    final Color amountColor;
+    final Widget amount;
     if (isTransfer && perspectiveAccountId == null) {
-      amountText = formatMoney(tx.amountMinor, source?.currency ?? '');
-      amountColor = colors.transfer;
-    } else if (incoming) {
-      amountText = formatSignedMoney(
-        tx.transferAmountMinor ?? tx.amountMinor,
-        dest?.currency ?? '',
-      );
-      amountColor = colors.income;
-    } else if (tx.type == TransactionType.income) {
-      amountText = formatSignedMoney(tx.amountMinor, source?.currency ?? '');
-      amountColor = colors.income;
+      amount = AmountText(tx.amountMinor, source?.currency ?? '', color: c.transfer);
     } else {
-      amountText = formatSignedMoney(-tx.amountMinor, source?.currency ?? '');
-      amountColor = colors.expense;
+      final effect = transactionEffect(tx, accounts, perspectiveAccountId)!;
+      amount = AmountText(
+        effect.minor,
+        effect.currency,
+        showPlus: effect.minor > 0,
+        color: effect.minor > 0 ? c.income : null,
+      );
     }
 
-    return ListTile(
+    return TransactionRow(
+      icon: icon,
+      iconColor: iconColor,
+      title: title,
+      subtitle: details.isEmpty ? null : details.join(' · '),
+      amount: amount,
       onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: transactionTypeColor(context, tx.type).withValues(alpha: 0.15),
-        child: Icon(
-          incoming ? Icons.arrow_downward : transactionTypeIcon(tx.type),
-          color: transactionTypeColor(context, tx.type),
-          size: 20,
-        ),
-      ),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: details.isEmpty
-          ? null
-          : Text(details.join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Text(amountText, style: theme.textTheme.titleSmall?.copyWith(color: amountColor)),
     );
   }
 }

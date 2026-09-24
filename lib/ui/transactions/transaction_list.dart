@@ -7,6 +7,10 @@ import '../../app/router.dart';
 import '../../core/format/dates.dart';
 import '../../domain/clock.dart';
 import '../common/describe_error.dart';
+import '../design/amount_text.dart';
+import '../design/day_header.dart';
+import '../design/empty_state.dart';
+import '../design/tokens.dart';
 import 'transaction_tile.dart';
 
 /// Cuántos movimientos se piden por página.
@@ -38,7 +42,8 @@ class TransactionList extends ConsumerStatefulWidget {
     required this.filter,
     this.perspectiveAccountId,
     this.header,
-    this.emptyMessage = 'Aún no hay movimientos.',
+    this.emptyMessage = 'Aún no hay movimientos',
+    this.emptyHint,
     this.pageSize = transactionPageSize,
   });
 
@@ -48,6 +53,7 @@ class TransactionList extends ConsumerStatefulWidget {
   /// Se muestra arriba, dentro del mismo desplazamiento.
   final Widget? header;
   final String emptyMessage;
+  final String? emptyHint;
   final int pageSize;
 
   @override
@@ -103,27 +109,70 @@ class _TransactionListState extends ConsumerState<TransactionList> {
     final rows = <Widget>[
       ?widget.header,
       if (data.isEmpty)
-        Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(child: Text(widget.emptyMessage, textAlign: TextAlign.center)),
+        SizedBox(
+          height: 320,
+          child: EmptyState(
+            icon: Icons.receipt_long_rounded,
+            title: widget.emptyMessage,
+            message: widget.emptyHint,
+          ),
         ),
     ];
-    DateTime? currentDay;
+    // Los movimientos vienen ordenados por fecha: se agrupan por día y cada
+    // grupo lleva su efecto neto sobre el saldo.
+    final groups = <DateTime, List<Transaction>>{};
     for (final tx in data) {
-      final day = dateOnly(tx.occurredAt);
-      if (day != currentDay) {
-        currentDay = day;
-        rows.add(_DayHeader(formatDayHeader(day, today)));
+      groups.putIfAbsent(dateOnly(tx.occurredAt), () => []).add(tx);
+    }
+    for (final MapEntry(key: day, value: txs) in groups.entries) {
+      final net = <String, int>{};
+      for (final tx in txs) {
+        final e = transactionEffect(tx, accounts, widget.perspectiveAccountId);
+        if (e != null) net[e.currency] = (net[e.currency] ?? 0) + e.minor;
       }
       rows.add(
-        TransactionTile(
-          transaction: tx,
-          accounts: accounts,
-          categories: categories,
-          perspectiveAccountId: widget.perspectiveAccountId,
-          onTap: () => context.push(Routes.transactionEdit(tx.id)),
+        DayHeader(
+          label: formatDayHeader(day, today),
+          total: net.isEmpty
+              ? null
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final e in net.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(left: Space.sm),
+                        child: AmountText(
+                          e.value,
+                          e.key,
+                          size: AmountSize.s,
+                          showPlus: true,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
         ),
       );
+      for (var i = 0; i < txs.length; i++) {
+        final tx = txs[i];
+        rows.add(
+          Container(
+            color: context.colors.surface,
+            child: Column(
+              children: [
+                if (i > 0) Divider(indent: 76, color: context.colors.border),
+                TransactionTile(
+                  transaction: tx,
+                  accounts: accounts,
+                  categories: categories,
+                  perspectiveAccountId: widget.perspectiveAccountId,
+                  onTap: () => context.push(Routes.transactionEdit(tx.id)),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
     }
     if (hasMore) {
       rows.add(
@@ -143,27 +192,9 @@ class _TransactionListState extends ConsumerState<TransactionList> {
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 88),
+        padding: const EdgeInsets.only(bottom: Space.xxl),
         itemCount: rows.length,
         itemBuilder: (_, i) => rows[i],
-      ),
-    );
-  }
-}
-
-class _DayHeader extends StatelessWidget {
-  const _DayHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        label,
-        style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/data/database/app_database.dart';
+import 'package:finanzas/ui/design/transaction_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -79,9 +80,12 @@ void main() {
       expect(find.text('Mi banco → Mi caja'), findsOneWidget);
       expect(find.text('Mi caja'), findsOneWidget); // la fila del gasto en efectivo
       // Vista general: las transferencias no suman ni restan.
-      expect(find.text('Q30.00'), findsOneWidget);
-      expect(find.text('-Q5.00'), findsOneWidget);
-      expect(find.text('+Q2,000.00'), findsOneWidget);
+      expect(inRow('Transferencia', 'Q30.00'), findsOneWidget);
+      expect(inRow('Comida', '-Q5.00'), findsOneWidget);
+      expect(inRow('Sueldo', '+Q2,000.00'), findsOneWidget);
+      // El total del día no cuenta las transferencias.
+      expect(inDayHeader('Hoy', '-Q5.00'), findsOneWidget);
+      expect(inDayHeader('Ayer', '+Q2,000.00'), findsOneWidget);
       expect(find.byType(InputChip), findsNothing);
       await unmountApp(tester);
     });
@@ -125,7 +129,7 @@ void main() {
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(ListTile, 'Comida'), findsOneWidget);
+      expect(find.widgetWithText(TransactionRow, 'Comida'), findsOneWidget);
       expect(find.text('Sueldo'), findsNothing);
       expect(find.text('Transporte'), findsNothing);
       expect(find.widgetWithText(InputChip, 'Mi caja'), findsOneWidget);
@@ -177,7 +181,7 @@ void main() {
       expect(find.text('Comida'), findsOneWidget);
       expect(find.text('Transferencia'), findsOneWidget);
       expect(find.text('De Mi banco'), findsOneWidget);
-      expect(find.text('+Q30.00'), findsOneWidget);
+      expect(inRow('Transferencia', '+Q30.00'), findsOneWidget);
       expect(find.text('Sueldo'), findsNothing);
       await unmountApp(tester);
     });

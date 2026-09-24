@@ -2,6 +2,8 @@ import 'package:finanzas/app/app.dart';
 import 'package:finanzas/app/providers.dart';
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/ui/design/app_bottom_bar.dart';
+import 'package:finanzas/ui/design/day_header.dart';
+import 'package:finanzas/ui/design/transaction_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -74,3 +76,14 @@ String? errorOf(WidgetTester tester, String label) {
   final decorator = find.ancestor(of: find.text(label), matching: find.byType(InputDecorator));
   return tester.widget<InputDecorator>(decorator.first).decoration.errorText;
 }
+
+/// [text] dentro de la fila de movimiento cuyo título es [title] (el mismo
+/// monto puede aparecer también en el total del día).
+Finder inRow(String title, String text) => find.descendant(
+  of: find.widgetWithText(TransactionRow, title),
+  matching: find.text(text),
+);
+
+/// [text] dentro del encabezado del día [label].
+Finder inDayHeader(String label, String text) =>
+    find.descendant(of: find.widgetWithText(DayHeader, label), matching: find.text(text));

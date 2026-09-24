@@ -45,13 +45,15 @@ void main() {
     expect(find.text('jueves 20 ago 2026'), findsOneWidget);
 
     expect(find.text('Comida'), findsOneWidget);
-    expect(find.text('-Q5.00'), findsOneWidget);
+    expect(inRow('Comida', '-Q5.00'), findsOneWidget);
+    expect(inDayHeader('Hoy', '-Q5.00'), findsOneWidget); // total del día
     expect(find.text('Sueldo'), findsOneWidget);
-    expect(find.text('+Q20.00'), findsOneWidget);
+    expect(inRow('Sueldo', '+Q20.00'), findsOneWidget);
+    expect(inDayHeader('Ayer', '+Q20.00'), findsOneWidget);
     // La transferencia se ve desde la cuenta: entra dinero, viene del banco.
     expect(find.text('Transferencia'), findsOneWidget);
     expect(find.text('De Mi banco'), findsOneWidget);
-    expect(find.text('+Q30.00'), findsOneWidget);
+    expect(inRow('Transferencia', '+Q30.00'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -61,7 +63,7 @@ void main() {
 
     expect(find.text('Q470.00'), findsOneWidget);
     expect(find.text('A Mi caja'), findsOneWidget);
-    expect(find.text('-Q30.00'), findsOneWidget);
+    expect(inRow('Transferencia', '-Q30.00'), findsOneWidget);
     await unmountApp(tester);
   });
 
@@ -81,7 +83,7 @@ void main() {
 
     expect(find.text('Q75.00'), findsOneWidget);
     expect(find.text('Transporte'), findsOneWidget);
-    expect(find.text('-Q25.00'), findsOneWidget);
+    expect(inRow('Transporte', '-Q25.00'), findsOneWidget);
     await unmountApp(tester);
   });
 
