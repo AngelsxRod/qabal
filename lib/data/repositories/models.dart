@@ -95,9 +95,25 @@ class TransactionInput {
   final String? statementId;
   final String? note;
   final String? receiptPath;
+
+  TransactionInput withStatement(String? statementId) => TransactionInput(
+        accountId: accountId,
+        type: type,
+        amountMinor: amountMinor,
+        occurredAt: occurredAt,
+        categoryId: categoryId,
+        transferAccountId: transferAccountId,
+        transferAmountMinor: transferAmountMinor,
+        contactId: contactId,
+        debtId: debtId,
+        statementId: statementId,
+        note: note,
+        receiptPath: receiptPath,
+      );
 }
 
-/// Filtros de listado de movimientos. `to` es exclusivo.
+/// Filtros de listado de movimientos. `to` es exclusivo. `accountId` incluye
+/// los movimientos de la cuenta y las transferencias que le llegan.
 class TransactionFilter {
   const TransactionFilter({
     this.accountId,
