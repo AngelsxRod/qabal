@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,9 @@ import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
 import '../ui/common/placeholder_screen.dart';
+import '../ui/design/gallery_screen.dart';
 import '../ui/home/home_screen.dart';
+import '../ui/more/more_screen.dart';
 import '../ui/shell/app_shell.dart';
 import '../ui/transactions/transaction_filter_params.dart';
 import '../ui/transactions/transaction_form_screen.dart';
@@ -23,6 +26,7 @@ abstract final class Routes {
   static const accounts = '/cuentas';
   static const debts = '/deudas';
   static const more = '/mas';
+  static const gallery = '/mas/galeria';
 
   static const accountNew = '/cuentas/nueva';
   static String accountDetail(String id) => '/cuentas/$id';
@@ -128,8 +132,15 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
           routes: [
             GoRoute(
               path: Routes.more,
-              builder: (_, _) =>
-                  const PlaceholderScreen(title: 'Más', icon: Icons.more_horiz),
+              builder: (_, _) => const MoreScreen(),
+              routes: [
+                if (kDebugMode)
+                  GoRoute(
+                    path: 'galeria',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (_, _) => const GalleryScreen(),
+                  ),
+              ],
             ),
           ],
         ),
