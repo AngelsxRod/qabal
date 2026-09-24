@@ -93,3 +93,14 @@ final class DuplicateNameException extends DomainException {
 final class DebtNotFullyPaidException extends DomainException {
   const DebtNotFullyPaidException(super.message);
 }
+
+/// Se intentó registrar un abono en una deuda `settled` o `forgiven`. Hay que
+/// reabrirla primero.
+final class DebtClosedException extends DomainException {
+  DebtClosedException(this.debtId, this.status)
+      : super('La deuda "$debtId" está ${status == 'settled' ? 'saldada' : 'perdonada'}; '
+            'reábrela para registrar abonos');
+
+  final String debtId;
+  final String status;
+}

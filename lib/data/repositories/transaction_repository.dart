@@ -359,6 +359,13 @@ GROUP BY a.currency, t.category_id''',
         throw CurrencyMismatchException(
             'La deuda es en ${debt.currency} y la cuenta en ${source.currency}');
       }
+      // Los abonos no se aceptan en deudas saldadas o perdonadas (hay que
+      // reabrirlas); al editar se permite conservar la deuda que ya tenía.
+      if (debt.status != DebtStatus.open &&
+          i.type == repaymentTypeOf(debt.direction) &&
+          existing?.debtId != debt.id) {
+        throw DebtClosedException(debt.id, debt.status.name);
+      }
     }
 
     if (i.contactId != null) {

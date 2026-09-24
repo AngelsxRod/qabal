@@ -26,12 +26,6 @@ class DebtRepository {
   final Now _now;
   final TransactionRepository _transactions;
 
-  static TransactionType originTypeOf(DebtDirection d) =>
-      d == DebtDirection.owedToMe ? TransactionType.expense : TransactionType.income;
-
-  static TransactionType repaymentTypeOf(DebtDirection d) =>
-      d == DebtDirection.owedToMe ? TransactionType.income : TransactionType.expense;
-
   /// Crea la deuda y, si se indica `originAccountId`, su movimiento de origen
   /// (por el monto del principal, sin categoría) en una sola transacción.
   /// Sin cuenta de origen sirve para deudas históricas.

@@ -3,6 +3,18 @@ import '../../domain/credit_card/card_cycle.dart';
 import '../../domain/credit_card/statement_status.dart';
 
 // ---------------------------------------------------------------------------
+// Reglas de movimientos de deuda
+// ---------------------------------------------------------------------------
+
+/// Tipo del movimiento que origina la deuda (dinero prestado o recibido).
+TransactionType originTypeOf(DebtDirection d) =>
+    d == DebtDirection.owedToMe ? TransactionType.expense : TransactionType.income;
+
+/// Tipo de los abonos: es el contrario al del origen.
+TransactionType repaymentTypeOf(DebtDirection d) =>
+    d == DebtDirection.owedToMe ? TransactionType.income : TransactionType.expense;
+
+// ---------------------------------------------------------------------------
 // Entradas
 // ---------------------------------------------------------------------------
 
