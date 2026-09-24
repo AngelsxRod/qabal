@@ -4,9 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import '../../domain/errors.dart';
 import '../common/describe_error.dart';
-import '../common/money_text_field.dart';
+import '../design/amount_input.dart';
+import '../design/app_button.dart';
+import '../design/bottom_action_bar.dart';
+import '../design/option_chips.dart';
+import '../design/tokens.dart';
+import '../design/typography.dart';
 import 'account_labels.dart';
 
 /// Crea una cuenta o, si recibe [accountId], edita su nombre y saldo inicial.
@@ -57,7 +63,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       _currency = account.currency;
       _originalBalanceText = account.initialBalanceMinor == 0
           ? ''
-          : formatPlain(account.initialBalanceMinor);
+          : account.initialBalanceMinor < 0
+          ? formatPlain(account.initialBalanceMinor)
+          : formatGrouped(account.initialBalanceMinor);
       _balance.text = _originalBalanceText!;
       _loading = false;
     });
@@ -71,9 +79,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   }
 
   Future<void> _save() async {
-    setState(() {
-      _nameError = _balanceError = _generalError = null;
-    });
+    setState(() => _nameError = _balanceError = _generalError = null);
 
     // Un saldo que no se tocó se conserva tal cual (puede ser negativo, que
     // el campo no sabe leer).
@@ -85,7 +91,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     } else if (balanceText.isEmpty) {
       balance = 0;
     } else {
-      balance = parseMinor(balanceText);
+      balance = parseInputMinor(balanceText);
       if (balance == null) {
         setState(() => _balanceError = invalidAmountMessage);
         return;
@@ -132,18 +138,28 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.colors;
+    final t = context.text;
     return Scaffold(
       appBar: AppBar(title: Text(_isEditing ? 'Editar cuenta' : 'Nueva cuenta')),
+      bottomNavigationBar: _loading
+          ? null
+          : BottomActionBar(
+              child: AppButton(
+                label: _isEditing ? 'Guardar cambios' : 'Crear cuenta',
+                loading: _saving,
+                onPressed: _save,
+              ),
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xl),
               children: [
                 if (_generalError != null) ...[
-                  Text(_generalError!, style: TextStyle(color: theme.colorScheme.error)),
-                  const SizedBox(height: 12),
+                  Text(_generalError!, style: t.caption.copyWith(color: c.danger)),
+                  const SizedBox(height: Space.md),
                 ],
                 TextField(
                   controller: _name,
@@ -152,54 +168,53 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                   onChanged: (_) => setState(() => _nameError = null),
                   decoration: InputDecoration(labelText: 'Nombre', errorText: _nameError),
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<AccountType>(
-                  isExpanded: true,
-                  initialValue: _type,
-                  decoration: const InputDecoration(labelText: 'Tipo'),
-                  items: [
-                    for (final t in AccountType.values)
-                      DropdownMenuItem(
-                        value: t,
-                        // Las tarjetas se habilitan en una fase posterior.
-                        enabled: t != AccountType.creditCard,
-                        child: Text(
-                          t == AccountType.creditCard
-                              ? '${accountTypeLabel(t)} · Próximamente'
-                              : accountTypeLabel(t),
-                          overflow: TextOverflow.ellipsis,
-                          style: t == AccountType.creditCard
-                              ? TextStyle(color: theme.disabledColor)
-                              : null,
-                        ),
+                const SizedBox(height: Space.xl),
+                Text('TIPO', style: t.label),
+                const SizedBox(height: Space.sm),
+                OptionChips<AccountType>(
+                  enabled: !_isEditing,
+                  value: _type,
+                  onChanged: (v) => setState(() => _type = v),
+                  options: [
+                    for (final type in AccountType.values)
+                      Option(
+                        type,
+                        type == AccountType.creditCard
+                            // Las tarjetas se habilitan en una fase posterior.
+                            ? '${accountTypeLabel(type)} · Próximamente'
+                            : accountTypeLabel(type),
+                        enabled: type != AccountType.creditCard,
                       ),
                   ],
-                  onChanged: _isEditing ? null : (t) => setState(() => _type = t ?? _type),
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: _currency,
-                  decoration: const InputDecoration(labelText: 'Moneda'),
-                  items: [
-                    for (final c in {...accountCurrencies, _currency})
-                      DropdownMenuItem(value: c, child: Text('$c (${currencySymbol(c)})')),
+                const SizedBox(height: Space.xl),
+                Text('MONEDA', style: t.label),
+                const SizedBox(height: Space.sm),
+                OptionChips<String>(
+                  enabled: !_isEditing,
+                  value: _currency,
+                  onChanged: (v) => setState(() => _currency = v),
+                  options: [
+                    for (final cur in {...accountCurrencies, _currency})
+                      Option(cur, '$cur (${currencySymbol(cur)})'),
                   ],
-                  onChanged: _isEditing ? null : (c) => setState(() => _currency = c ?? _currency),
                 ),
-                const SizedBox(height: 16),
-                MoneyTextField(
+                const SizedBox(height: Space.xl),
+                Text('SALDO INICIAL', style: t.label),
+                const SizedBox(height: Space.xs),
+                AmountInput(
                   controller: _balance,
-                  label: 'Saldo inicial',
                   currency: _currency,
+                  label: 'Saldo inicial',
+                  large: false,
                   errorText: _balanceError,
-                  helperText: 'Lo que tiene la cuenta hoy. Déjalo vacío si empieza en cero.',
                   onChanged: (_) => setState(() => _balanceError = null),
                 ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: Text(_isEditing ? 'Guardar cambios' : 'Crear cuenta'),
+                const SizedBox(height: Space.xs),
+                Text(
+                  'Lo que tiene la cuenta hoy. Déjalo vacío si empieza en cero.',
+                  style: t.caption,
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

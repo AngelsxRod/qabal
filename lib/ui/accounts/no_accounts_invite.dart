@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router.dart';
+import '../design/empty_state.dart';
 
 /// Primer arranque: en lugar de una pantalla vacía, invita a crear la primera
 /// cuenta.
@@ -10,33 +11,13 @@ class NoAccountsInvite extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.account_balance_wallet_outlined,
-                size: 64, color: theme.colorScheme.primary),
-            const SizedBox(height: 16),
-            Text('Aún no tienes cuentas', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Crea tu primera cuenta (efectivo, banco…) para empezar a registrar '
-              'tus movimientos.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => context.push(Routes.accountNew),
-              icon: const Icon(Icons.add),
-              label: const Text('Crear mi primera cuenta'),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.account_balance_wallet_rounded,
+      title: 'Aún no tienes cuentas',
+      message:
+          'Crea tu primera cuenta (efectivo, banco…) para empezar a registrar tus movimientos.',
+      actionLabel: 'Crear mi primera cuenta',
+      onAction: () => context.push(Routes.accountNew),
     );
   }
 }

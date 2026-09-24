@@ -2,6 +2,7 @@ import 'package:finanzas/app/app.dart';
 import 'package:finanzas/app/providers.dart';
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/ui/design/app_bottom_bar.dart';
+import 'package:finanzas/ui/design/amount_input.dart';
 import 'package:finanzas/ui/design/day_header.dart';
 import 'package:finanzas/ui/design/transaction_row.dart';
 import 'package:flutter/material.dart';
@@ -87,3 +88,24 @@ Finder inRow(String title, String text) => find.descendant(
 /// [text] dentro del encabezado del día [label].
 Finder inDayHeader(String label, String text) =>
     find.descendant(of: find.widgetWithText(DayHeader, label), matching: find.text(text));
+
+/// El campo de texto del [index]-ésimo `AmountInput` de la pantalla.
+Finder amountField([int index = 0]) => find.descendant(
+  of: find.byType(AmountInput).at(index),
+  matching: find.byType(TextField),
+);
+
+/// Escribe [text] en el `AmountInput` número [index] (pasa por el formateador).
+Future<void> enterAmount(WidgetTester tester, String text, {int index = 0}) async {
+  await tester.enterText(amountField(index), text);
+  await tester.pump();
+}
+
+/// Lo que muestra ahora el `AmountInput` número [index].
+String amountText(WidgetTester tester, [int index = 0]) =>
+    tester.widget<TextField>(amountField(index)).controller!.text;
+
+/// Texto de error mostrado dentro de [inside] (un `AmountInput`, `AccountChips`,
+/// `PickerRow`…), o null.
+Finder errorIn(Finder inside, String message) =>
+    find.descendant(of: inside, matching: find.text(message));

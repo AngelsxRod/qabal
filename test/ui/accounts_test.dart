@@ -28,12 +28,13 @@ void main() {
     expect(find.text('Nueva cuenta'), findsOneWidget);
 
     await tester.enterText(field('Nombre'), 'Billetera');
-    await tester.enterText(field('Saldo inicial'), '150.50');
+    await enterAmount(tester, '150.50');
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
     expect(find.text('Billetera'), findsOneWidget);
-    expect(find.text('Q150.50'), findsOneWidget);
+    // Una vez en la fila de la cuenta y otra en el saldo total.
+    expect(find.text('Q150.50'), findsNWidgets(2));
     expect(find.text('Aún no tienes cuentas'), findsNothing);
 
     final saved = (await env.accounts.list()).single;
@@ -48,7 +49,9 @@ void main() {
     await pumpApp(tester, env, location: '/cuentas/nueva');
 
     await tester.enterText(field('Nombre'), 'Banco');
-    await tester.enterText(field('Saldo inicial'), '1234,50');
+    await enterAmount(tester, '1234,50');
+    // Se muestra con miles y punto decimal mientras se escribe.
+    expect(amountText(tester), '1,234.50');
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
@@ -56,25 +59,23 @@ void main() {
     await unmountApp(tester);
   });
 
-  testWidgets('el tipo tarjeta de crédito aparece deshabilitado como Próximamente',
-      (tester) async {
+  testWidgets('el tipo tarjeta de crédito aparece deshabilitado como Próximamente', (
+    tester,
+  ) async {
     await pumpApp(tester, env, location: '/cuentas/nueva');
 
-    await tester.tap(find.text('Efectivo'));
-    await tester.pumpAndSettle();
+    // Tocarlo no lo elige: si lo hiciera, crear la cuenta fallaría (las
+    // tarjetas piden sus datos) y no habría cuenta bancaria al final.
     await tester.tap(find.text('Tarjeta de crédito · Próximamente'));
     await tester.pumpAndSettle();
-
-    // La opción deshabilitada no se elige: el menú sigue abierto.
-    expect(find.text('Tarjeta de crédito · Próximamente'), findsOneWidget);
-
-    // Se puede elegir otro tipo normal.
     await tester.tap(find.text('Cuenta bancaria'));
     await tester.pumpAndSettle();
     await tester.enterText(field('Nombre'), 'Banrural');
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
-    expect((await env.accounts.list()).single.type, AccountType.bank);
+
+    final saved = await env.accounts.list();
+    expect(saved.single.type, AccountType.bank);
     await unmountApp(tester);
   });
 
@@ -97,17 +98,15 @@ void main() {
     await unmountApp(tester);
   });
 
-  testWidgets('un saldo ambiguo se rechaza en el campo Saldo inicial', (tester) async {
+  testWidgets('el saldo inicial no acepta letras ni estilo europeo', (tester) async {
     await pumpApp(tester, env, location: '/cuentas/nueva');
 
-    await tester.enterText(field('Nombre'), 'Caja');
-    await tester.enterText(field('Saldo inicial'), '1,234');
-    await tester.tap(find.text('Crear cuenta'));
-    await tester.pumpAndSettle();
-
-    final balance = tester.widget<TextField>(field('Saldo inicial'));
-    expect(balance.decoration!.errorText, contains('Monto inválido'));
-    expect(await env.accounts.list(), isEmpty);
+    await enterAmount(tester, 'abc');
+    expect(amountText(tester), '');
+    await enterAmount(tester, '1.234,50'); // ambiguo: se rechaza
+    expect(amountText(tester), '');
+    await enterAmount(tester, '12500');
+    expect(amountText(tester), '12,500');
     await unmountApp(tester);
   });
 
@@ -116,10 +115,10 @@ void main() {
     await pumpApp(tester, env, location: '/cuentas/${account.id}/editar');
 
     expect(tester.widget<TextField>(field('Nombre')).controller!.text, 'Caja');
-    expect(tester.widget<TextField>(field('Saldo inicial')).controller!.text, '10.00');
+    expect(amountText(tester), '10.00');
 
     await tester.enterText(field('Nombre'), 'Caja chica');
-    await tester.enterText(field('Saldo inicial'), '25');
+    await enterAmount(tester, '25');
     await tester.tap(find.text('Guardar cambios'));
     await tester.pumpAndSettle();
 
@@ -137,7 +136,7 @@ void main() {
     await pumpApp(tester, env, location: '/cuentas');
 
     expect(find.text('Mi billetera'), findsOneWidget);
-    expect(find.text('Q37.50'), findsOneWidget);
+    expect(find.text('Q37.50'), findsNWidgets(2)); // fila y saldo total
     expect(find.text('Banco viejo'), findsNothing);
 
     await tester.tap(find.byType(PopupMenuButton<void>));

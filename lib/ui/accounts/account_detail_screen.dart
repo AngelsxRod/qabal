@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../design/tokens.dart';
-import '../../core/format/money.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
 import '../common/describe_error.dart';
+import '../design/amount_text.dart';
+import '../design/quick_action.dart';
+import '../design/tokens.dart';
+import '../design/typography.dart';
 import '../transactions/transaction_list.dart';
 import 'account_labels.dart';
 
@@ -65,70 +67,79 @@ class AccountDetailScreen extends ConsumerWidget {
           ],
         ],
       ),
-      floatingActionButton: account == null || account.isArchived
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => context.push(Routes.transactionNewFor(accountId: accountId)),
-              icon: const Icon(Icons.add),
-              label: const Text('Nuevo movimiento'),
-            ),
       body: AsyncBody(
         value: balance,
         data: (item) => TransactionList(
           filter: TransactionFilter(accountId: accountId),
           perspectiveAccountId: accountId,
           emptyMessage: 'Esta cuenta aún no tiene movimientos.',
-          header: _BalanceHeader(item),
+          emptyHint: 'Cuando registres uno, aparecerá aquí.',
+          header: _Header(item),
         ),
       ),
     );
   }
 }
 
-class _BalanceHeader extends StatelessWidget {
-  const _BalanceHeader(this.item);
+class _Header extends StatelessWidget {
+  const _Header(this.item);
 
   final AccountBalance item;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final a = item.account;
+    final c = context.colors;
+    final t = context.text;
+    void open(TransactionType type) =>
+        context.push(Routes.transactionNewFor(accountId: a.id, type: type));
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        color: theme.colorScheme.primaryContainer,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${accountTypeLabel(a.type)} · ${a.currency}',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
+      padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${accountTypeLabel(a.type)} · ${a.currency}', style: t.caption),
+          const SizedBox(height: Space.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: AmountText(
+              item.balanceMinor,
+              a.currency,
+              size: AmountSize.xl,
+              color: item.balanceMinor < 0 ? c.expense : null,
+            ),
+          ),
+          if (a.isArchived) ...[
+            const SizedBox(height: Space.sm),
+            Chip(
+              label: const Text('Archivada'),
+              visualDensity: VisualDensity.compact,
+              avatar: const Icon(Icons.archive_outlined, size: 16),
+            ),
+          ] else ...[
+            const SizedBox(height: Space.lg),
+            QuickActions(
+              children: [
+                QuickAction(
+                  icon: Icons.arrow_upward_rounded,
+                  label: 'Gasto',
+                  onTap: () => open(TransactionType.expense),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                formatMoney(item.balanceMinor, a.currency),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: item.balanceMinor < 0
-                      ? context.colors.expense
-                      : theme.colorScheme.onPrimaryContainer,
+                QuickAction(
+                  icon: Icons.arrow_downward_rounded,
+                  label: 'Ingreso',
+                  onTap: () => open(TransactionType.income),
                 ),
-              ),
-              if (a.isArchived) ...[
-                const SizedBox(height: 8),
-                Chip(
-                  label: const Text('Archivada'),
-                  visualDensity: VisualDensity.compact,
-                  avatar: const Icon(Icons.archive_outlined, size: 16),
+                QuickAction(
+                  icon: Icons.swap_horiz_rounded,
+                  label: 'Transferir',
+                  onTap: () => open(TransactionType.transfer),
                 ),
               ],
-            ],
-          ),
-        ),
+            ),
+          ],
+        ],
       ),
     );
   }

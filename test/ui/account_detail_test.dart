@@ -89,7 +89,7 @@ void main() {
 
   testWidgets('archiva con confirmación y restaura la cuenta', (tester) async {
     await openDetail(tester, cash);
-    expect(find.text('Nuevo movimiento'), findsOneWidget);
+    expect(find.text('Transferir'), findsOneWidget);
 
     await tester.tap(find.byType(PopupMenuButton<void>));
     await tester.pumpAndSettle();
@@ -111,24 +111,24 @@ void main() {
 
     expect((await env.accounts.get(cash.id))!.isArchived, isTrue);
     expect(find.text('Archivada'), findsOneWidget);
-    expect(find.text('Nuevo movimiento'), findsNothing);
+    expect(find.text('Transferir'), findsNothing);
 
     await tester.tap(find.byType(PopupMenuButton<void>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Restaurar cuenta'));
     await tester.pumpAndSettle();
     expect((await env.accounts.get(cash.id))!.isArchived, isFalse);
-    expect(find.text('Nuevo movimiento'), findsOneWidget);
+    expect(find.text('Transferir'), findsOneWidget);
     await unmountApp(tester);
   });
 
-  testWidgets('el botón Nuevo movimiento abre el formulario con la cuenta elegida', (tester) async {
+  testWidgets('los botones rápidos abren el formulario con la cuenta elegida', (tester) async {
     await openDetail(tester, cash);
-    await tester.tap(find.text('Nuevo movimiento'));
+    await tester.tap(find.text('Ingreso'));
     await tester.pumpAndSettle();
 
     expect(find.text('Nuevo movimiento'), findsOneWidget); // título del formulario
-    expect(find.text('Mi caja · Efectivo (GTQ)'), findsOneWidget);
+    expect(find.text('Guardar ingreso'), findsOneWidget); // ya viene como ingreso
     await unmountApp(tester);
   });
 

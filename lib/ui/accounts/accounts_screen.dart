@@ -4,11 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../design/tokens.dart';
-import '../../core/format/money.dart';
 import '../common/async_body.dart';
+import '../design/amount_text.dart';
+import '../design/app_button.dart';
+import '../design/app_card.dart';
+import '../design/category_avatar.dart';
+import '../design/tab_app_bar.dart';
+import '../design/tokens.dart';
+import '../design/typography.dart';
 import 'account_labels.dart';
+import 'account_totals.dart';
 import 'no_accounts_invite.dart';
+import 'total_balance_card.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -23,11 +30,16 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   @override
   Widget build(BuildContext context) {
     final balances = ref.watch(accountBalancesProvider(true));
-    final hasAny = balances.value?.any((b) => isPlainAccount(b.account)) ?? true;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cuentas'),
+      appBar: tabAppBar(
+        context,
+        'Cuentas',
         actions: [
+          IconButton(
+            tooltip: 'Nueva cuenta',
+            icon: const Icon(Icons.add_rounded),
+            onPressed: () => context.push(Routes.accountNew),
+          ),
           PopupMenuButton<void>(
             tooltip: 'Más opciones',
             itemBuilder: (_) => [
@@ -40,27 +52,44 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           ),
         ],
       ),
-      floatingActionButton: hasAny
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push(Routes.accountNew),
-              icon: const Icon(Icons.add),
-              label: const Text('Nueva cuenta'),
-            )
-          : null,
       body: AsyncBody(
         value: balances,
         data: (all) {
           final plain = all.where((b) => isPlainAccount(b.account)).toList();
           if (plain.isEmpty) return const NoAccountsInvite();
           final visible = plain.where((b) => _showArchived || !b.account.isArchived).toList();
-          if (visible.isEmpty) {
-            return const Center(child: Text('Todas tus cuentas están archivadas.'));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.only(bottom: 88),
-            itemCount: visible.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, i) => _AccountTile(visible[i]),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xxl),
+            children: [
+              TotalBalanceCard(totals: totalsByCurrency(plain)),
+              const SizedBox(height: Space.xl),
+              Text('MIS CUENTAS', style: context.text.label),
+              const SizedBox(height: Space.sm),
+              if (visible.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Space.lg),
+                  child: Text('Todas tus cuentas están archivadas.', style: context.text.caption),
+                )
+              else
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < visible.length; i++) ...[
+                        if (i > 0) Divider(indent: 72, color: context.colors.border),
+                        _AccountRow(visible[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              const SizedBox(height: Space.xl),
+              AppButton(
+                label: 'Nueva cuenta',
+                kind: AppButtonKind.secondary,
+                icon: Icons.add_rounded,
+                onPressed: () => context.push(Routes.accountNew),
+              ),
+            ],
           );
         },
       ),
@@ -68,32 +97,50 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   }
 }
 
-class _AccountTile extends StatelessWidget {
-  const _AccountTile(this.item);
+class _AccountRow extends StatelessWidget {
+  const _AccountRow(this.item);
 
   final AccountBalance item;
 
   @override
   Widget build(BuildContext context) {
     final a = item.account;
-    final theme = Theme.of(context);
-    final negative = item.balanceMinor < 0;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.secondaryContainer,
-        child: Icon(accountTypeIcon(a.type), color: theme.colorScheme.onSecondaryContainer),
-      ),
-      title: Text(a.name),
-      subtitle: Text(
-        a.isArchived ? '${accountTypeLabel(a.type)} · Archivada' : accountTypeLabel(a.type),
-      ),
-      trailing: Text(
-        formatMoney(item.balanceMinor, a.currency),
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: negative ? context.colors.expense : null,
+    final c = context.colors;
+    final t = context.text;
+    return InkWell(
+      onTap: () => context.push(Routes.accountDetail(a.id)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 68),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.sm),
+          child: Row(
+            children: [
+              CategoryAvatar(icon: accountTypeIcon(a.type), color: c.accent),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(a.name, style: t.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      a.isArchived
+                          ? '${accountTypeLabel(a.type)} · Archivada'
+                          : accountTypeLabel(a.type),
+                      style: t.caption,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              AmountText(
+                item.balanceMinor,
+                a.currency,
+                color: item.balanceMinor < 0 ? c.expense : null,
+              ),
+            ],
+          ),
         ),
       ),
-      onTap: () => context.push(Routes.accountDetail(a.id)),
     );
   }
 }
