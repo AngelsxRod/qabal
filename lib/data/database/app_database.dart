@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'date_only_converter.dart';
+import 'seed.dart';
 import 'tables/accounts.dart';
 import 'tables/categories.dart';
 import 'tables/contacts.dart';
@@ -43,9 +44,13 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
+        onCreate: (m) async {
+          await m.createAll();
+          await seedDefaults(this);
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
+          await ensureSystemCategories(this);
         },
       );
 }
