@@ -161,6 +161,85 @@ void main() {
     });
   });
 
+  group('abonos a deudas cerradas', () {
+    test('saldada: rechaza abonos; reabrirla los vuelve a permitir', () async {
+      final d = await env.debts.create(input(principal: 10000));
+      await env.income(cash.id, 10000, day, debtId: d.id);
+      await env.debts.settle(d.id);
+      await expectLater(env.income(cash.id, 500, day, debtId: d.id),
+          throwsA(isA<DebtClosedException>()));
+      await env.debts.reopen(d.id);
+      await env.income(cash.id, 500, day, debtId: d.id);
+      expect((await env.debts.balance(d.id)).paidMinor, 10500);
+    });
+
+    test('perdonada: rechaza abonos; reabrirla los vuelve a permitir', () async {
+      final d = await env.debts.create(input());
+      await env.debts.forgive(d.id);
+      await expectLater(env.income(cash.id, 500, day, debtId: d.id),
+          throwsA(isA<DebtClosedException>()));
+      await env.debts.reopen(d.id);
+      await env.income(cash.id, 500, day, debtId: d.id);
+    });
+
+    test('yo debo: los abonos (gastos) también se rechazan si está cerrada', () async {
+      final d = await env.debts.create(input(direction: DebtDirection.iOwe));
+      await env.debts.forgive(d.id);
+      await expectLater(env.expense(cash.id, 500, day, debtId: d.id),
+          throwsA(isA<DebtClosedException>()));
+    });
+
+    test('la excepción no deja movimientos ni cambia el saldo', () async {
+      final d = await env.debts.create(input());
+      await env.debts.forgive(d.id);
+      await expectLater(env.income(cash.id, 500, day, debtId: d.id),
+          throwsA(isA<DebtClosedException>()));
+      expect(await env.transactions.list(TransactionFilter(debtId: d.id)), isEmpty);
+      expect(await cashBalance(), 100000);
+    });
+
+    test('editar un abono ya registrado en una deuda saldada sí se permite', () async {
+      final d = await env.debts.create(input(principal: 10000));
+      final pay = await env.income(cash.id, 10000, day, debtId: d.id);
+      await env.debts.settle(d.id);
+      await env.transactions.update(
+        pay.id,
+        TransactionInput(
+            accountId: cash.id,
+            type: TransactionType.income,
+            amountMinor: 9000,
+            occurredAt: day,
+            debtId: d.id),
+      );
+      expect((await env.debts.balance(d.id)).paidMinor, 9000);
+    });
+
+    test('mover un abono a una deuda cerrada se rechaza', () async {
+      final open = await env.debts.create(input());
+      final closed = await env.debts.create(input(principal: 1000));
+      await env.debts.forgive(closed.id);
+      final pay = await env.income(cash.id, 500, day, debtId: open.id);
+      await expectLater(
+        env.transactions.update(
+          pay.id,
+          TransactionInput(
+              accountId: cash.id,
+              type: TransactionType.income,
+              amountMinor: 500,
+              occurredAt: day,
+              debtId: closed.id),
+        ),
+        throwsA(isA<DebtClosedException>()),
+      );
+    });
+
+    test('un movimiento de origen (tipo contrario) no se considera abono', () async {
+      final d = await env.debts.create(input());
+      await env.debts.forgive(d.id);
+      await env.expense(cash.id, 500, day, debtId: d.id); // préstamo adicional
+    });
+  });
+
   group('validaciones de creación', () {
     test('principal <= 0, contacto inexistente, vencimiento anterior al inicio', () async {
       await expectLater(env.debts.create(input(principal: 0)),
