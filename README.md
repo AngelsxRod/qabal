@@ -27,6 +27,7 @@ flutter build apk --debug
 
 ## Estructura
 
-- `lib/data/database/`: base de datos Drift (tablas en `tables/`).
-- `lib/domain/credit_card/`: lógica pura de ciclos y estados de cuenta de tarjeta.
-- `test/`: pruebas de dominio y de esquema (base en memoria).
+- `lib/data/database/`: base de datos Drift (tablas en `tables/`) y sembrado de categorías (`seed.dart`).
+- `lib/data/repositories/`: repositorios con las reglas de negocio, validaciones y cálculos (saldos, ciclos de tarjeta, deudas, totales). Ofrecen versiones reactivas (`watch...`) y reciben un reloj inyectable (`Now`).
+- `lib/domain/`: errores de dominio (`errors.dart`), reloj y lógica pura de ciclos y estados de cuenta de tarjeta.
+- `test/`: pruebas de dominio, de esquema y de repositorios (base en memoria y reloj falso).
