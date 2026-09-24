@@ -7,6 +7,7 @@ import '../../app/router.dart';
 import '../accounts/account_labels.dart';
 import '../accounts/no_accounts_invite.dart';
 import '../common/async_body.dart';
+import '../design/tab_app_bar.dart';
 import 'transaction_filter_params.dart';
 import 'transaction_filter_sheet.dart';
 import 'transaction_labels.dart';
@@ -32,8 +33,9 @@ class TransactionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountBalancesProvider(true));
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Movimientos'),
+      appBar: tabAppBar(
+        context,
+        'Movimientos',
         actions: [
           IconButton(
             tooltip: 'Filtrar',
@@ -44,7 +46,7 @@ class TransactionsScreen extends ConsumerWidget {
             icon: Badge(
               isLabelVisible: params.activeCount > 0,
               label: Text('${params.activeCount}'),
-              child: const Icon(Icons.filter_list),
+              child: const Icon(Icons.tune_rounded),
             ),
           ),
         ],
@@ -62,23 +64,17 @@ class TransactionsScreen extends ConsumerWidget {
                   filter: params.toFilter(),
                   perspectiveAccountId: params.accountId,
                   emptyMessage: params.isEmpty
-                      ? 'Aún no hay movimientos. Registra el primero con el botón de abajo.'
+                      ? 'Aún no hay movimientos'
                       : 'Ningún movimiento coincide con los filtros.',
+                  emptyHint: params.isEmpty
+                      ? 'Registra el primero con el botón + de la barra inferior.'
+                      : 'Prueba quitando alguno.',
                 ),
               ),
             ],
           );
         },
       ),
-      floatingActionButton: accountsAsync.value?.any((b) => isPlainAccount(b.account)) ?? false
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push(
-                Routes.transactionNewFor(accountId: params.accountId, type: params.type),
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('Nuevo movimiento'),
-            )
-          : null,
     );
   }
 }

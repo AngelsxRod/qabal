@@ -1,6 +1,6 @@
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/data/database/app_database.dart';
-import 'package:finanzas/data/repositories/models.dart';
+import 'package:finanzas/ui/design/account_chips.dart';
 import 'package:finanzas/ui/design/transaction_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,7 +96,8 @@ void main() {
 
       await tester.tap(find.byTooltip('Filtrar'));
       await tester.pumpAndSettle();
-      await pick(tester, 'Tipo', 'Gasto');
+      await tester.tap(find.text('Gasto'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
 
@@ -125,8 +126,18 @@ void main() {
 
       await tester.tap(find.byTooltip('Filtrar'));
       await tester.pumpAndSettle();
-      await pick(tester, 'Cuenta', 'Mi caja');
-      await pick(tester, 'Categoría', 'Comida');
+      final cashChip = find.descendant(
+        of: find.byType(AccountChips),
+        matching: find.text('Mi caja'),
+      );
+      await tester.ensureVisible(cashChip); // la fila de chips se desplaza
+      await tester.pumpAndSettle();
+      await tester.tap(cashChip);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Categoría'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Comida').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
 
@@ -150,7 +161,8 @@ void main() {
 
       await tester.tap(find.byTooltip('Filtrar'));
       await tester.pumpAndSettle();
-      await pick(tester, 'Etiqueta', 'Viaje');
+      await tester.tap(find.text('Viaje'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
 
@@ -201,20 +213,6 @@ void main() {
 
       expect(find.text('Comida'), findsOneWidget);
       expect(find.byType(InputChip), findsNothing);
-      await unmountApp(tester);
-    });
-
-    testWidgets('el botón Nuevo movimiento respeta la cuenta filtrada', (tester) async {
-      await pumpApp(tester, env, location: '${Routes.transactions}?cuenta=${bank.id}');
-
-      await tester.tap(find.text('Nuevo movimiento'));
-      await tester.pumpAndSettle();
-      // La cuenta filtrada viene elegida: se puede guardar sin tocar las cuentas.
-      await enterAmount(tester, '7.77');
-      await tester.tap(find.text('Guardar gasto'));
-      await tester.pumpAndSettle();
-      final saved = await env.transactions.list(const TransactionFilter());
-      expect(saved.where((t) => t.amountMinor == 777).single.accountId, bank.id);
       await unmountApp(tester);
     });
   });
