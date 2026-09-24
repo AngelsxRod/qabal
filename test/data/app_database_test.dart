@@ -4,8 +4,11 @@ import 'package:finanzas/data/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  extendedTests();
+  group('esquema base', baseTests);
+  group('esquema ampliado', extendedTests);
+}
 
+void baseTests() {
   late AppDatabase db;
 
   setUp(() => db = AppDatabase.forTesting(NativeDatabase.memory()));
