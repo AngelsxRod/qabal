@@ -10,7 +10,9 @@ import '../ui/accounts/accounts_screen.dart';
 import '../ui/common/placeholder_screen.dart';
 import '../ui/home/home_screen.dart';
 import '../ui/shell/app_shell.dart';
+import '../ui/transactions/transaction_filter_params.dart';
 import '../ui/transactions/transaction_form_screen.dart';
+import '../ui/transactions/transactions_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
@@ -60,9 +62,8 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
           routes: [
             GoRoute(
               path: Routes.transactions,
-              builder: (_, _) => const PlaceholderScreen(
-                title: 'Movimientos',
-                icon: Icons.receipt_long_outlined,
+              builder: (_, state) => TransactionsScreen(
+                params: TransactionFilterParams.fromQuery(state.uri.queryParameters),
               ),
               routes: [
                 GoRoute(

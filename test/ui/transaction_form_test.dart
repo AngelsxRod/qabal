@@ -49,7 +49,7 @@ void main() {
     expect(tx.occurredAt, DateTime(2026, 9, 1));
     expect(await balanceOf(cash), 10000 - 4550);
     // Volvió a la pantalla anterior.
-    expect(find.text('Nuevo movimiento'), findsNothing);
+    expect(find.text('Guardar gasto'), findsNothing);
     await unmountApp(tester);
   });
 
