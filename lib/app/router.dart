@@ -8,6 +8,7 @@ import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
 import '../ui/common/placeholder_screen.dart';
+import '../ui/home/home_screen.dart';
 import '../ui/shell/app_shell.dart';
 import '../ui/transactions/transaction_form_screen.dart';
 
@@ -51,10 +52,7 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
           routes: [
             GoRoute(
               path: Routes.home,
-              builder: (_, _) => const PlaceholderScreen(
-                title: 'Inicio',
-                icon: Icons.home_outlined,
-              ),
+              builder: (_, _) => const HomeScreen(),
             ),
           ],
         ),
