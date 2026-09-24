@@ -152,6 +152,26 @@ class TransactionFilter {
   final DateTime? to;
   final int? limit;
   final int? offset;
+
+  /// Igualdad por valor: permite usar el filtro como clave de un `.family`.
+  @override
+  bool operator ==(Object other) =>
+      other is TransactionFilter &&
+      other.accountId == accountId &&
+      other.categoryId == categoryId &&
+      other.contactId == contactId &&
+      other.debtId == debtId &&
+      other.statementId == statementId &&
+      other.tagId == tagId &&
+      other.type == type &&
+      other.from == from &&
+      other.to == to &&
+      other.limit == limit &&
+      other.offset == offset;
+
+  @override
+  int get hashCode => Object.hash(accountId, categoryId, contactId, debtId, statementId,
+      tagId, type, from, to, limit, offset);
 }
 
 class DebtInput {
