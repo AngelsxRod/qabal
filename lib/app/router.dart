@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'providers.dart';
 
+import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
 import '../ui/common/placeholder_screen.dart';
@@ -97,6 +98,11 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
                   path: 'nueva',
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (_, _) => const AccountFormScreen(),
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) =>
+                      AccountDetailScreen(accountId: state.pathParameters['id']!),
                 ),
                 GoRoute(
                   path: ':id/editar',
