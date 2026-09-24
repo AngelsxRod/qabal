@@ -55,8 +55,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       _name.text = account.name;
       _type = account.type;
       _currency = account.currency;
-      _originalBalanceText =
-          account.initialBalanceMinor == 0 ? '' : formatPlain(account.initialBalanceMinor);
+      _originalBalanceText = account.initialBalanceMinor == 0
+          ? ''
+          : formatPlain(account.initialBalanceMinor);
       _balance.text = _originalBalanceText!;
       _loading = false;
     });
@@ -101,12 +102,14 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
           initialBalanceMinor: keepBalance ? null : balance,
         );
       } else {
-        await repo.create(AccountInput(
-          name: _name.text,
-          type: _type,
-          currency: _currency,
-          initialBalanceMinor: balance ?? 0,
-        ));
+        await repo.create(
+          AccountInput(
+            name: _name.text,
+            type: _type,
+            currency: _currency,
+            initialBalanceMinor: balance ?? 0,
+          ),
+        );
       }
       if (mounted) context.pop();
     } catch (e) {
@@ -135,6 +138,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(16),
               children: [
                 if (_generalError != null) ...[
@@ -164,6 +168,9 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                               ? '${accountTypeLabel(t)} · Próximamente'
                               : accountTypeLabel(t),
                           overflow: TextOverflow.ellipsis,
+                          style: t == AccountType.creditCard
+                              ? TextStyle(color: theme.disabledColor)
+                              : null,
                         ),
                       ),
                   ],
@@ -178,8 +185,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                     for (final c in {...accountCurrencies, _currency})
                       DropdownMenuItem(value: c, child: Text('$c (${currencySymbol(c)})')),
                   ],
-                  onChanged:
-                      _isEditing ? null : (c) => setState(() => _currency = c ?? _currency),
+                  onChanged: _isEditing ? null : (c) => setState(() => _currency = c ?? _currency),
                 ),
                 const SizedBox(height: 16),
                 MoneyTextField(

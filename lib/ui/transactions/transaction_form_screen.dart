@@ -362,6 +362,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final general = _errors[ErrorField.general];
 
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
         if (general != null) ...[
@@ -371,14 +372,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         SegmentedButton<TransactionType>(
           segments: [
             for (final t in TransactionType.values)
-              ButtonSegment(
-                value: t,
-                icon: Icon(transactionTypeIcon(t)),
-                label: Text(transactionTypeLabel(t)),
-              ),
+              ButtonSegment(value: t, label: Text(transactionTypeLabel(t))),
           ],
           selected: {_type},
           showSelectedIcon: false,
+          // Sin íconos y compacto: en 320 dp "Transferencia" no cabe si no.
+          style: SegmentedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            textStyle: const TextStyle(fontSize: 13),
+          ),
           onSelectionChanged: (s) => setState(() {
             _type = s.first;
             _errors.clear();

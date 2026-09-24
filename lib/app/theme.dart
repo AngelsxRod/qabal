@@ -56,6 +56,20 @@ ThemeData _build(Brightness brightness, MoneyColors money) {
     inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
     cardTheme: const CardThemeData(margin: EdgeInsets.zero),
     listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+    // En pantallas de 320 dp, "Movimientos" no cabe en una línea con el estilo
+    // por defecto (12 sp con separación de letras); con 10 sp sí cabe.
+    navigationBarTheme: NavigationBarThemeData(
+      labelPadding: EdgeInsets.zero,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? scheme.onSurface
+              : scheme.onSurfaceVariant,
+        ),
+      ),
+    ),
   );
 }
 
