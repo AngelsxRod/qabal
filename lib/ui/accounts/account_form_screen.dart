@@ -42,6 +42,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
   final _statementDay = TextEditingController();
   final _dueDay = TextEditingController();
   final _minPercent = TextEditingController();
+  final _scroll = ScrollController();
   late AccountType _type = widget.initialType ?? AccountType.cash;
   String _currency = 'GTQ';
 
@@ -122,6 +123,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
     _statementDay.dispose();
     _dueDay.dispose();
     _minPercent.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -229,6 +231,17 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
         switch (errorFieldOf(e)) {
           case ErrorField.name:
             _nameError = message;
+            // El nombre es el primer campo: en un formulario largo (tarjeta) su
+            // error quedaría fuera de pantalla.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_scroll.hasClients) {
+                _scroll.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
           case ErrorField.amount:
             _balanceError = message;
           case ErrorField.cardSchedule:
@@ -285,6 +298,7 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
+              controller: _scroll,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xl),
               child: Column(
