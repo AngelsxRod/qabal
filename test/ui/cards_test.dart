@@ -75,6 +75,29 @@ void main() {
       await unmountApp(tester);
     });
 
+    testWidgets('el error del nombre se ve aunque el formulario esté desplazado', (tester) async {
+      await pumpApp(tester, env, location: Routes.accountNew);
+      tester.view.physicalSize = const Size(960, 1920); // 320 × 640 dp
+      tester.view.devicePixelRatio = 3;
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Tarjeta de crédito'));
+      await tester.pumpAndSettle();
+      await enterAmount(tester, '10000', index: 1);
+      await tester.enterText(dayField('Día de corte'), '21');
+      await tester.enterText(dayField('Día de pago'), '15');
+      await tester.ensureVisible(find.text('PAGO MÍNIMO (OPCIONAL)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Crear tarjeta'));
+      await tester.pumpAndSettle();
+
+      final error = find.text('El nombre no puede estar vacío');
+      expect(error, findsOneWidget);
+      expect(tester.getTopLeft(error).dy, greaterThan(0));
+      expect(tester.getBottomLeft(error).dy, lessThan(640 - 72));
+      await unmountApp(tester);
+    });
+
     testWidgets('pide límite y días antes de guardar', (tester) async {
       await pumpApp(tester, env, location: Routes.accountNew);
 
