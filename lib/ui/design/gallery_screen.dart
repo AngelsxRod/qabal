@@ -13,6 +13,8 @@ import 'category_picker.dart';
 import 'category_style.dart';
 import 'day_header.dart';
 import 'empty_state.dart';
+import 'list_row.dart';
+import 'month_selector.dart';
 import 'picker_row.dart';
 import 'tokens.dart';
 import 'transaction_row.dart';
@@ -35,6 +37,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   String _account = 'a1';
   String? _category = 'default:food';
   int _tab = 1;
+  DateTime _month = DateTime(2026, 9);
 
   @override
   void dispose() {
@@ -317,6 +320,53 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+          section(
+            'Selector de mes',
+            padded(
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: MonthSelector(
+                  month: _month,
+                  onPrevious: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
+                  onNext: _month.isBefore(DateTime(2026, 9))
+                      ? () => setState(() => _month = DateTime(_month.year, _month.month + 1))
+                      : null,
+                ),
+              ),
+            ),
+          ),
+          section(
+            'Filas de lista',
+            padded(
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    AppListRow(
+                      leading: Icon(Icons.category_rounded, color: c.accent),
+                      title: 'Categorías',
+                      subtitle: 'Gastos e ingresos',
+                      onTap: () {},
+                    ),
+                    Divider(color: c.border),
+                    AppListRow(
+                      leading: Icon(Icons.local_offer_rounded, color: c.textTertiary),
+                      title: 'Archivada',
+                      subtitle: 'Atenuada, pero tocable',
+                      dimmed: true,
+                      onTap: () {},
+                    ),
+                    Divider(color: c.border),
+                    AppListRow(
+                      leading: Icon(Icons.handshake_rounded, color: c.textTertiary),
+                      title: 'Deudas',
+                      subtitle: 'Próximamente',
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

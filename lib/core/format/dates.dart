@@ -6,12 +6,20 @@ const _months = [
   'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
 ];
 
+const _monthNames = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', //
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
 const _weekdays = [
   'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo', //
 ];
 
 /// `2026-09-21` → `21 sep 2026`.
 String formatDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
+
+/// `2026-09-21` → `Septiembre 2026`.
+String formatMonth(DateTime d) => '${_monthNames[d.month - 1]} ${d.year}';
 
 /// Encabezado de un grupo de movimientos: `Hoy`, `Ayer` o
 /// `lunes 21 sep 2026`.
