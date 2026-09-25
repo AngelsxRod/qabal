@@ -9,6 +9,8 @@ import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
 import '../ui/catalog/contacts_screen.dart';
+import '../ui/categories/categories_screen.dart';
+import '../ui/categories/category_form_screen.dart';
 import '../ui/catalog/tags_screen.dart';
 import '../ui/design/gallery_screen.dart';
 import '../ui/home/home_screen.dart';
@@ -26,6 +28,15 @@ abstract final class Routes {
   static const transactions = '/movimientos';
   static const accounts = '/cuentas';
   static const more = '/mas';
+  static const categories = '/mas/categorias';
+  static String categoryEdit(String id) => '/mas/categorias/$id';
+
+  /// Formulario de categoría nueva; con [parentId] es una subcategoría.
+  static String categoryNew({CategoryKind? kind, String? parentId}) => Uri(
+    path: '/mas/categorias/nueva',
+    queryParameters: {'tipo': ?kind?.name, 'padre': ?parentId},
+  ).toString();
+
   static const contacts = '/mas/contactos';
   static const tags = '/mas/etiquetas';
   static const gallery = '/mas/galeria';
@@ -125,6 +136,27 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
               path: Routes.more,
               builder: (_, _) => const MoreScreen(),
               routes: [
+                GoRoute(
+                  path: 'categorias',
+                  builder: (_, _) => const CategoriesScreen(),
+                  routes: [
+                    // Los formularios cubren la barra de pestañas.
+                    GoRoute(
+                      path: 'nueva',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (_, state) => CategoryFormScreen(
+                        initialKind: CategoryKind.values.asNameMap()[state.uri.queryParameters['tipo']],
+                        parentId: state.uri.queryParameters['padre'],
+                      ),
+                    ),
+                    GoRoute(
+                      path: ':id',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (_, state) =>
+                          CategoryFormScreen(categoryId: state.pathParameters['id']),
+                    ),
+                  ],
+                ),
                 GoRoute(path: 'contactos', builder: (_, _) => const ContactsScreen()),
                 GoRoute(path: 'etiquetas', builder: (_, _) => const TagsScreen()),
                 if (kDebugMode)

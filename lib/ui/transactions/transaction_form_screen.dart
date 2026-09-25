@@ -9,6 +9,7 @@ import '../../core/format/money_input.dart';
 import '../../domain/clock.dart';
 import '../../domain/errors.dart';
 import '../accounts/account_labels.dart';
+import '../categories/category_order.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
 import '../common/describe_error.dart';
@@ -314,10 +315,15 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (picked != null) setState(() => _date = dateOnly(picked));
   }
 
-  Future<void> _pickCategory(List<Category> options) async {
+  Future<void> _pickCategory(List<Category> options, Map<String, Category> byId) async {
     // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.
     FocusScope.of(context).unfocus();
-    final pick = await showCategoryPicker(context, categories: options, selectedId: _categoryId);
+    final pick = await showCategoryPicker(
+      context,
+      categories: options,
+      selectedId: _categoryId,
+      labelOf: (c) => categoryLabel(c, byId),
+    );
     if (pick == null) return;
     setState(() {
       _categoryId = pick.id;
@@ -433,9 +439,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 
     final categoriesById = {for (final x in categories) x.id: x};
     final kind = _type == TransactionType.income ? CategoryKind.income : CategoryKind.expense;
-    final visibleCategories =
-        categories.where((x) => x.kind == kind && (!x.isArchived || x.id == _categoryId)).toList()
-          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final visibleCategories = orderForPicker([
+      for (final x in categories)
+        if (x.kind == kind && (!x.isArchived || x.id == _categoryId)) x,
+    ]);
     final visibleContacts = contacts.where((x) => !x.isArchived || x.id == _contactId).toList();
     final showCategory = !isTransfer && _existing?.debtId == null;
     final selectedCategory = categoriesById[_categoryId];
@@ -564,7 +571,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                       color: categoryStyle.color,
                       size: 36,
                     ),
-                    onTap: () => _pickCategory(visibleCategories),
+                    onTap: () => _pickCategory(visibleCategories, categoriesById),
                   ),
                   Divider(color: c.border),
                 ],

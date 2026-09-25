@@ -15,13 +15,15 @@ class CategoryPick {
 }
 
 /// Hoja inferior con las categorías en cuadrícula de íconos. [categories]
-/// debe venir ya filtrada por tipo.
+/// debe venir ya filtrada por tipo y ordenada; [labelOf] rotula cada celda
+/// (por defecto, el nombre).
 Future<CategoryPick?> showCategoryPicker(
   BuildContext context, {
   required List<Category> categories,
   required String? selectedId,
   String title = 'Categoría',
   String noneLabel = 'Sin categoría',
+  String Function(Category)? labelOf,
 }) => showModalBottomSheet<CategoryPick>(
   context: context,
   isScrollControlled: true,
@@ -33,6 +35,7 @@ Future<CategoryPick?> showCategoryPicker(
     selectedId: selectedId,
     title: title,
     noneLabel: noneLabel,
+    labelOf: labelOf,
   ),
 );
 
@@ -42,12 +45,14 @@ class _CategoryGrid extends StatelessWidget {
     required this.selectedId,
     required this.title,
     required this.noneLabel,
+    required this.labelOf,
   });
 
   final List<Category> categories;
   final String? selectedId;
   final String title;
   final String noneLabel;
+  final String Function(Category)? labelOf;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +68,7 @@ class _CategoryGrid extends StatelessWidget {
       ),
       for (final cat in categories)
         _Cell(
-          label: cat.name,
+          label: labelOf?.call(cat) ?? cat.name,
           selected: cat.id == selectedId,
           style: categoryStyleFor(cat, brightness),
           onTap: () => Navigator.of(context).pop(CategoryPick(cat.id)),
