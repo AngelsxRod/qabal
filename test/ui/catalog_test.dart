@@ -118,6 +118,13 @@ void main() {
       final tag = await env.tags.create('Viaje');
       await pumpApp(tester, env, location: Routes.tags);
 
+      // El botón de archivar es accesible por separado de la fila.
+      final semantics = tester.ensureSemantics();
+      final button = tester.getSemantics(find.byTooltip('Archivar Viaje')).getSemanticsData();
+      expect(button.tooltip, 'Archivar Viaje');
+      expect(button.flagsCollection.isButton, isTrue);
+      expect(find.bySemanticsLabel('Viaje'), findsOneWidget);
+      semantics.dispose();
       await tester.tap(find.byTooltip('Archivar Viaje'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cancelar'));
