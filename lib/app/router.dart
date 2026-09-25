@@ -48,16 +48,26 @@ abstract final class Routes {
   static const transactionNew = '/movimientos/nuevo';
   static String transactionEdit(String id) => '/movimientos/$id';
 
-  /// Formulario de movimiento nuevo; opcionalmente con cuenta y tipo ya
-  /// elegidos.
-  static String transactionNewFor({String? accountId, TransactionType? type}) =>
-      Uri(
-        path: transactionNew,
-        queryParameters: {
-          'cuenta': ?accountId,
-          'tipo': ?type?.name,
-        },
-      ).toString();
+  /// Formulario de movimiento nuevo; opcionalmente con cuenta, tipo, cuenta
+  /// destino, categoría, estado de cuenta y monto (en centavos) ya elegidos.
+  static String transactionNewFor({
+    String? accountId,
+    TransactionType? type,
+    String? destinationId,
+    String? categoryId,
+    String? statementId,
+    int? amountMinor,
+  }) => Uri(
+    path: transactionNew,
+    queryParameters: {
+      'cuenta': ?accountId,
+      'tipo': ?type?.name,
+      'destino': ?destinationId,
+      'categoria': ?categoryId,
+      'estado': ?statementId,
+      'monto': ?amountMinor?.toString(),
+    },
+  ).toString();
 }
 
 GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
@@ -87,6 +97,10 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
                   path: 'nuevo',
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (_, state) => TransactionFormScreen(
+                    initialDestinationId: state.uri.queryParameters['destino'],
+                    initialCategoryId: state.uri.queryParameters['categoria'],
+                    initialStatementId: state.uri.queryParameters['estado'],
+                    initialAmountMinor: int.tryParse(state.uri.queryParameters['monto'] ?? ''),
                     initialAccountId: state.uri.queryParameters['cuenta'],
                     initialType: TransactionType.values
                         .asNameMap()[state.uri.queryParameters['tipo']],

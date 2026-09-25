@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../../core/format/dates.dart';
+import '../../core/format/money.dart';
 import '../../core/format/money_input.dart';
 import '../../domain/clock.dart';
+import '../../domain/credit_card/statement_status.dart';
 import '../../domain/errors.dart';
+import '../cards/statement_row.dart';
 import '../categories/category_order.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
@@ -15,6 +18,8 @@ import '../common/describe_error.dart';
 import '../common/name_dialog.dart';
 import '../design/account_chips.dart';
 import '../design/amount_input.dart';
+import '../design/info_note.dart';
+import '../design/option_chips.dart';
 import '../design/app_button.dart';
 import '../design/app_card.dart';
 import '../design/bottom_action_bar.dart';
@@ -28,6 +33,9 @@ import '../design/type_switcher.dart';
 import '../design/typography.dart';
 import 'transaction_labels.dart';
 
+/// Con qué estado de cuenta se vincula un pago a tarjeta.
+enum _PaymentLink { suggested, other, none }
+
 /// Valores especiales de la hoja de contactos.
 const _noContact = '';
 const _newContact = '__new__';
@@ -40,11 +48,25 @@ class TransactionFormScreen extends ConsumerStatefulWidget {
     this.transactionId,
     this.initialAccountId,
     this.initialType,
+    this.initialDestinationId,
+    this.initialCategoryId,
+    this.initialStatementId,
+    this.initialAmountMinor,
   });
 
   final String? transactionId;
   final String? initialAccountId;
   final TransactionType? initialType;
+
+  /// Cuenta destino de una transferencia (por ejemplo, la tarjeta a pagar).
+  final String? initialDestinationId;
+  final String? initialCategoryId;
+
+  /// Estado de cuenta al que vincular un pago a tarjeta.
+  final String? initialStatementId;
+
+  /// Monto inicial, en centavos.
+  final int? initialAmountMinor;
 
   @override
   ConsumerState<TransactionFormScreen> createState() => _TransactionFormScreenState();
@@ -64,6 +86,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   Set<String> _tagIds = {};
   bool _moreOpen = false;
 
+  /// Vínculo de un pago a tarjeta con un estado de cuenta.
+  _PaymentLink _link = _PaymentLink.suggested;
+  String? _linkedStatementId;
+
   /// Cuenta del último movimiento registrado: va primera y preseleccionada.
   String? _lastUsedId;
 
@@ -82,7 +108,16 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     super.initState();
     _type = widget.initialType ?? TransactionType.expense;
     _accountId = widget.initialAccountId;
+    _destinationId = widget.initialDestinationId;
+    _categoryId = widget.initialCategoryId;
     _date = ref.read(dayProvider);
+    if (widget.initialStatementId != null) {
+      _link = _PaymentLink.other;
+      _linkedStatementId = widget.initialStatementId;
+    }
+    if (widget.initialAmountMinor != null) {
+      _amount.text = formatGrouped(widget.initialAmountMinor!);
+    }
     if (_isEditing) {
       _loading = true;
       _load();
@@ -98,7 +133,8 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     if (!mounted || latest.isEmpty) return;
     setState(() {
       _lastUsedId = latest.first.accountId;
-      _accountId ??= _lastUsedId;
+      // Al pagar una tarjeta no se sugiere pagarla con ella misma.
+      if (_lastUsedId != _destinationId) _accountId ??= _lastUsedId;
     });
   }
 
@@ -125,6 +161,10 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       }
       _note.text = tx.note ?? '';
       _tagIds = tags.map((t) => t.id).toSet();
+      if (tx.type == TransactionType.transfer) {
+        _link = tx.statementId == null ? _PaymentLink.none : _PaymentLink.other;
+        _linkedStatementId = tx.statementId;
+      }
       _moreOpen = tx.contactId != null || tags.isNotEmpty || (tx.note ?? '').isNotEmpty;
       _loading = false;
     });
@@ -186,6 +226,14 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       return;
     }
 
+    // El estado sugerido se pide al guardar: puede haber cambiado desde que se
+    // mostró el bloque de pago.
+    final suggestedStatementId =
+        isTransfer && dest!.type == AccountType.creditCard && _link == _PaymentLink.suggested
+        ? await ref.read(creditCardRepositoryProvider).suggestStatementForPayment(dest.id)
+        : null;
+    if (!mounted) return;
+
     final existing = _existing;
     final keepsTime = existing != null && dateOnly(existing.occurredAt) == _date;
     final input = TransactionInput(
@@ -198,10 +246,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       transferAmountMinor: isTransfer ? destAmount : null,
       contactId: isTransfer ? null : _contactId,
       debtId: existing?.debtId,
-      // El vínculo con un estado de cuenta solo sobrevive si sigue siendo el
-      // mismo pago a la misma tarjeta.
-      statementId: isTransfer && dest!.id == existing?.transferAccountId
-          ? existing?.statementId
+      statementId: isTransfer && dest!.type == AccountType.creditCard
+          ? switch (_link) {
+              _PaymentLink.suggested => suggestedStatementId,
+              _PaymentLink.other => _linkedStatementId,
+              _PaymentLink.none => null,
+            }
           : null,
       note: _note.text.trim().isEmpty ? null : _note.text.trim(),
       receiptPath: existing?.receiptPath,
@@ -216,7 +266,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       if (_isEditing) {
         await repo.update(widget.transactionId!, input, tagIds: _tagIds);
       } else {
-        await repo.create(input, tagIds: _tagIds);
+        await repo.create(
+          input,
+          tagIds: _tagIds,
+          // "No vincular" es un pago adelantado: que no se asigne solo.
+          autoAssignStatement: _link != _PaymentLink.none,
+        );
       }
       if (mounted) context.pop();
     } catch (e) {
@@ -312,6 +367,46 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       lastDate: DateTime(today.year + 1, today.month, today.day),
     );
     if (picked != null) setState(() => _date = dateOnly(picked));
+  }
+
+  Future<void> _pickStatement(List<StatementView> options, String currency) async {
+    FocusScope.of(context).unfocus();
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.gutter, 0, Space.gutter, Space.sm),
+            child: Text('Estado de cuenta', style: context.text.heading),
+          ),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final v in options)
+                  StatementRow(
+                    view: v,
+                    currency: currency,
+                    onTap: () => Navigator.of(context).pop(v.statement.id),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Space.lg),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _link = _PaymentLink.other;
+      _linkedStatementId = picked;
+    });
   }
 
   Future<void> _pickCategory(List<Category> options, Map<String, Category> byId) async {
@@ -433,6 +528,30 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
 
+    // Pago a tarjeta: estados de la tarjeta destino y el elegido para vincular.
+    final destIsCard = isTransfer && dest?.type == AccountType.creditCard;
+    final cardStatements = destIsCard
+        ? ref.watch(cardStatementsProvider((cardId: dest!.id, includeArchived: false))).value
+        : null;
+    final unpaid =
+        (cardStatements ?? const <StatementView>[])
+            .where((v) => v.status != StatementStatus.paid)
+            .toList()
+          ..sort((a, b) => a.statement.dueDate.compareTo(b.statement.dueDate));
+    final suggestedStatement = unpaid.firstOrNull;
+    final chosenStatement = switch (_link) {
+      _PaymentLink.suggested => suggestedStatement,
+      _PaymentLink.other =>
+        cardStatements?.where((v) => v.statement.id == _linkedStatementId).firstOrNull,
+      _PaymentLink.none => null,
+    };
+    void fillAmount(int minor) {
+      final target = crossCurrency ? _destAmount : _amount;
+      target.text = formatGrouped(minor);
+      _clearError(crossCurrency ? ErrorField.transferAmount : ErrorField.amount);
+      setState(() {});
+    }
+
     final categoriesById = {for (final x in categories) x.id: x};
     final kind = _type == TransactionType.income ? CategoryKind.income : CategoryKind.expense;
     final visibleCategories = orderForPicker([
@@ -506,6 +625,36 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             onChanged: (_) => _clearError(ErrorField.amount),
           ),
         ),
+        if (chosenStatement != null && dest != null) ...[
+          const SizedBox(height: Space.sm),
+          padded(
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: Space.sm,
+              runSpacing: Space.sm,
+              children: [
+                if (chosenStatement.statement.statementBalanceMinor > chosenStatement.paidMinor)
+                  ActionChip(
+                    label: Text(
+                      'Pago total ${formatMoney(chosenStatement.statement.statementBalanceMinor - chosenStatement.paidMinor, dest.currency)}',
+                    ),
+                    onPressed: () => fillAmount(
+                      chosenStatement.statement.statementBalanceMinor - chosenStatement.paidMinor,
+                    ),
+                  ),
+                if (chosenStatement.statement.minimumPaymentMinor > chosenStatement.paidMinor)
+                  ActionChip(
+                    label: Text(
+                      'Pago mínimo ${formatMoney(chosenStatement.statement.minimumPaymentMinor - chosenStatement.paidMinor, dest.currency)}',
+                    ),
+                    onPressed: () => fillAmount(
+                      chosenStatement.statement.minimumPaymentMinor - chosenStatement.paidMinor,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         if (crossCurrency) ...[
           const SizedBox(height: Space.lg),
           padded(Text('Monto que llega', style: t.label, textAlign: TextAlign.center)),
@@ -543,9 +692,72 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
             selectedId: _destinationId,
             errorText: _errors[ErrorField.destination],
             onSelected: (id) => setState(() {
+              if (id != _destinationId) {
+                _link = _PaymentLink.suggested;
+                _linkedStatementId = null;
+              }
               _destinationId = id;
               _errors.remove(ErrorField.destination);
             }),
+          ),
+        ],
+        if (destIsCard && cardStatements != null) ...[
+          label('ESTADO DE CUENTA'),
+          padded(
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (unpaid.isEmpty && _link != _PaymentLink.other)
+                    const InfoNote(
+                      text:
+                          'Esta tarjeta no tiene estados de cuenta pendientes. '
+                          'El pago no se vinculará a ninguno.',
+                    )
+                  else ...[
+                    if (chosenStatement != null) ...[
+                      Text(
+                        'Corte ${formatDate(chosenStatement.statement.closingDate)}',
+                        style: t.bodyStrong,
+                      ),
+                      Text(
+                        'Saldo ${formatMoney(chosenStatement.statement.statementBalanceMinor, dest!.currency)} · '
+                        'pendiente ${formatMoney((chosenStatement.statement.statementBalanceMinor - chosenStatement.paidMinor).clamp(0, 1 << 62), dest.currency)} · '
+                        'vence ${formatDayMonth(chosenStatement.statement.dueDate)}',
+                        style: t.caption,
+                      ),
+                    ] else ...[
+                      Text('Sin vincular', style: t.bodyStrong),
+                      Text('Pago adelantado: cuenta para el ciclo en curso.', style: t.caption),
+                    ],
+                    const SizedBox(height: Space.md),
+                    OptionChips<_PaymentLink>(
+                      value: _link,
+                      onChanged: (v) {
+                        if (v == _PaymentLink.other) {
+                          _pickStatement(cardStatements, dest!.currency);
+                        } else {
+                          setState(() => _link = v);
+                        }
+                      },
+                      options: [
+                        Option(
+                          _PaymentLink.suggested,
+                          'Aplicar al sugerido',
+                          enabled: suggestedStatement != null,
+                        ),
+                        Option(
+                          _PaymentLink.other,
+                          'Elegir otro…',
+                          enabled: cardStatements.isNotEmpty,
+                        ),
+                        const Option(_PaymentLink.none, 'No vincular (pago adelantado)'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ],
         const SizedBox(height: Space.xl),
