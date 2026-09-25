@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../domain/clock.dart';
 import '../../domain/credit_card/card_cycle.dart';
+import '../../domain/credit_card/statement_status.dart';
 import '../../domain/errors.dart';
 import '../database/app_database.dart';
 import 'ledger_queries.dart';
@@ -213,6 +214,49 @@ class CreditCardRepository {
         () => statements(cardId, includeArchived: includeArchived),
       );
 
+  /// Deuda estimada por la app al final del día `closingDate` (positiva si se
+  /// debe): lo que debería decir el estado de cuenta de ese corte.
+  Future<int> estimatedBalanceAt(String cardId, DateTime closingDate) async {
+    await _card(cardId);
+    return -await _ledger.balanceOf(cardId, before: _dayAfter(dateOnly(closingDate)));
+  }
+
+  /// Estados de cuenta no archivados de tarjetas activas que no están pagados
+  /// por completo, de la fecha de pago más próxima a la más lejana.
+  Future<List<PendingStatement>> pendingStatements() async {
+    final rows = await (_db.select(_db.creditCardStatements).join([
+      innerJoin(_db.accounts, _db.accounts.id.equalsExp(_db.creditCardStatements.accountId)),
+    ])
+          ..where(_db.creditCardStatements.isArchived.equals(false) &
+              _db.accounts.isArchived.equals(false))
+          ..orderBy([
+            OrderingTerm.asc(_db.creditCardStatements.dueDate),
+            OrderingTerm.asc(_db.creditCardStatements.closingDate),
+          ]))
+        .get();
+    final items = [
+      for (final r in rows) (r.readTable(_db.accounts), r.readTable(_db.creditCardStatements)),
+    ];
+    final paid = await _ledger.paidByStatement(items.map((i) => i.$2.id));
+    final today = _now();
+    return [
+      for (final (card, s) in items)
+        if (_ledger.statusOf(s, paid[s.id] ?? 0, today) != StatementStatus.paid)
+          PendingStatement(
+            card: card,
+            statement: s,
+            paidMinor: paid[s.id] ?? 0,
+            status: _ledger.statusOf(s, paid[s.id] ?? 0, today),
+          ),
+    ];
+  }
+
+  Stream<List<PendingStatement>> watchPendingStatements() => watchComputed(
+        _db,
+        [_db.transactions, _db.creditCardStatements, _db.accounts],
+        pendingStatements,
+      );
+
   /// Estado de cuenta al que asignar un pago nuevo: el no archivado y no
   /// pagado por completo con fecha de pago más antigua (incluye los que solo
   /// tienen el mínimo cubierto).
@@ -234,7 +278,7 @@ class CreditCardRepository {
       statement: s,
       paidMinor: paid,
       status: _ledger.statusOf(s, paid, today),
-      estimatedBalanceMinor: -await _ledger.balanceOf(s.accountId, before: end),
+      estimatedBalanceMinor: await estimatedBalanceAt(s.accountId, s.closingDate),
       movements: await _ledger.cycleMovements(s.accountId, s.periodStart, end),
     );
   }

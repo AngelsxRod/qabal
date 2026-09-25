@@ -348,6 +348,35 @@ class StatementView {
   int get differenceMinor => statement.statementBalanceMinor - estimatedBalanceMinor;
 }
 
+/// Estado de cuenta que aún no está pagado por completo, con su tarjeta.
+class PendingStatement {
+  const PendingStatement({
+    required this.card,
+    required this.statement,
+    required this.paidMinor,
+    required this.status,
+  });
+
+  final Account card;
+  final CreditCardStatement statement;
+
+  /// Suma de los pagos vinculados a este estado.
+  final int paidMinor;
+  final StatementStatus status;
+
+  /// Lo que falta para saldar el estado (nunca negativo).
+  int get pendingMinor {
+    final p = statement.statementBalanceMinor - paidMinor;
+    return p > 0 ? p : 0;
+  }
+
+  /// Lo que falta para cubrir el mínimo (nunca negativo).
+  int get minimumPendingMinor {
+    final p = statement.minimumPaymentMinor - paidMinor;
+    return p > 0 ? p : 0;
+  }
+}
+
 /// Totales de un período, por moneda (sin conversión). Excluye transferencias
 /// y movimientos con `debtId`.
 class PeriodTotals {
