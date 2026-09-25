@@ -8,6 +8,8 @@ import 'providers.dart';
 import '../ui/accounts/account_detail_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
+import '../ui/catalog/contacts_screen.dart';
+import '../ui/catalog/tags_screen.dart';
 import '../ui/design/gallery_screen.dart';
 import '../ui/home/home_screen.dart';
 import '../ui/more/more_screen.dart';
@@ -24,6 +26,8 @@ abstract final class Routes {
   static const transactions = '/movimientos';
   static const accounts = '/cuentas';
   static const more = '/mas';
+  static const contacts = '/mas/contactos';
+  static const tags = '/mas/etiquetas';
   static const gallery = '/mas/galeria';
 
   static const accountNew = '/cuentas/nueva';
@@ -121,6 +125,8 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
               path: Routes.more,
               builder: (_, _) => const MoreScreen(),
               routes: [
+                GoRoute(path: 'contactos', builder: (_, _) => const ContactsScreen()),
+                GoRoute(path: 'etiquetas', builder: (_, _) => const TagsScreen()),
                 if (kDebugMode)
                   GoRoute(
                     path: 'galeria',

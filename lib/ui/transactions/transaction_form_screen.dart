@@ -12,6 +12,7 @@ import '../accounts/account_labels.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
 import '../common/describe_error.dart';
+import '../common/name_dialog.dart';
 import '../design/account_chips.dart';
 import '../design/amount_input.dart';
 import '../design/app_button.dart';
@@ -257,30 +258,6 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
   // Selectores y alta rápida de contactos y etiquetas
   // ---------------------------------------------------------------------
 
-  Future<String?> _askName(String title) {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Nombre'),
-          onSubmitted: (v) => Navigator.of(context).pop(v),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Crear'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _pickContact(List<Contact> contacts) async {
     // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.
     FocusScope.of(context).unfocus();
@@ -304,30 +281,25 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     }
   }
 
-  Future<void> _createContact() async {
-    final name = await _askName('Nuevo contacto');
-    if (name == null || !mounted) return;
-    try {
+  Future<void> _createContact() => showNameDialog(
+    context,
+    title: 'Nuevo contacto',
+    confirmLabel: 'Crear',
+    onSubmit: (name) async {
       final contact = await ref.read(contactRepositoryProvider).create(ContactInput(name: name));
-      setState(() => _contactId = contact.id);
-    } on DomainException catch (e) {
-      _snack(describeError(e));
-    }
-  }
+      if (mounted) setState(() => _contactId = contact.id);
+    },
+  );
 
-  Future<void> _createTag() async {
-    final name = await _askName('Nueva etiqueta');
-    if (name == null || !mounted) return;
-    try {
+  Future<void> _createTag() => showNameDialog(
+    context,
+    title: 'Nueva etiqueta',
+    confirmLabel: 'Crear',
+    onSubmit: (name) async {
       final tag = await ref.read(tagRepositoryProvider).create(name);
-      setState(() => _tagIds = {..._tagIds, tag.id});
-    } on DomainException catch (e) {
-      _snack(describeError(e));
-    }
-  }
-
-  void _snack(String message) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      if (mounted) setState(() => _tagIds = {..._tagIds, tag.id});
+    },
+  );
 
   Future<void> _pickDate() async {
     // Sin esto, al cerrar el selector el foco vuelve al monto y sube el teclado.

@@ -29,6 +29,20 @@ class MoreScreen extends StatelessWidget {
             child: Column(
               children: [
                 AppListRow(
+                  leading: icon(Icons.person_rounded, enabled: true),
+                  title: 'Contactos',
+                  subtitle: 'Personas y comercios',
+                  onTap: () => context.push(Routes.contacts),
+                ),
+                Divider(color: c.border),
+                AppListRow(
+                  leading: icon(Icons.local_offer_rounded, enabled: true),
+                  title: 'Etiquetas',
+                  subtitle: 'Agrupa tus movimientos',
+                  onTap: () => context.push(Routes.tags),
+                ),
+                Divider(color: c.border),
+                AppListRow(
                   leading: icon(Icons.handshake_rounded, enabled: false),
                   title: 'Deudas',
                   subtitle: 'Próximamente',
