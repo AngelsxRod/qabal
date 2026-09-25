@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
-import '../accounts/account_labels.dart';
 import '../design/account_chips.dart';
 import '../design/app_button.dart';
 import '../design/category_avatar.dart';
@@ -81,7 +80,6 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
     final brightness = Theme.of(context).brightness;
     final accounts = (ref.watch(accountBalancesProvider(true)).value ?? const [])
         .map((b) => b.account)
-        .where(isPlainAccount)
         .toList();
     final categories = ref.watch(categoriesProvider).value ?? const <Category>[];
     final categoriesById = {for (final x in categories) x.id: x};

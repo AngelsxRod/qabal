@@ -18,6 +18,9 @@ const _weekdays = [
 /// `2026-09-21` → `21 sep 2026`.
 String formatDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
+/// `2026-10-21` → `21 oct`.
+String formatDayMonth(DateTime d) => '${d.day} ${_months[d.month - 1]}';
+
 /// `2026-09-21` → `Septiembre 2026`.
 String formatMonth(DateTime d) => '${_monthNames[d.month - 1]} ${d.year}';
 

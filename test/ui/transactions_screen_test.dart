@@ -43,11 +43,14 @@ void main() {
       await unmountApp(tester);
     });
 
-    testWidgets('las tarjetas no cuentan como cuenta usable todavía', (tester) async {
+    testWidgets('una tarjeta ya cuenta como cuenta: no se invita a crear la primera', (
+      tester,
+    ) async {
       await env.card();
       await pumpApp(tester, env, location: Routes.accounts);
 
-      expect(find.text('Aún no tienes cuentas'), findsOneWidget);
+      expect(find.text('Aún no tienes cuentas'), findsNothing);
+      expect(find.text('Visa'), findsOneWidget);
       await unmountApp(tester);
     });
   });

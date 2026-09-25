@@ -59,17 +59,20 @@ void main() {
     await unmountApp(tester);
   });
 
-  testWidgets('el tipo tarjeta de crédito aparece deshabilitado como Próximamente', (
+  testWidgets('elegir Tarjeta de crédito muestra sus campos y volver a otro tipo los oculta', (
     tester,
   ) async {
     await pumpApp(tester, env, location: '/cuentas/nueva');
 
-    // Tocarlo no lo elige: si lo hiciera, crear la cuenta fallaría (las
-    // tarjetas piden sus datos) y no habría cuenta bancaria al final.
-    await tester.tap(find.text('Tarjeta · Próximamente'));
+    await tester.tap(find.text('Tarjeta de crédito'));
     await tester.pumpAndSettle();
+    expect(find.text('Crear tarjeta'), findsOneWidget);
+    expect(find.text('LÍMITE DE CRÉDITO'), findsOneWidget);
+    expect(find.text('DEUDA ACTUAL'), findsOneWidget);
+
     await tester.tap(find.text('Cuenta bancaria'));
     await tester.pumpAndSettle();
+    expect(find.text('LÍMITE DE CRÉDITO'), findsNothing);
     await tester.enterText(field('Nombre'), 'Banrural');
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();

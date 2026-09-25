@@ -49,9 +49,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: AsyncBody(
         value: ref.watch(accountBalancesProvider(true)),
         data: (all) {
-          final plain = all.where((b) => isPlainAccount(b.account)).toList();
-          if (plain.isEmpty) return const NoAccountsInvite();
-          final active = plain.where((b) => !b.account.isArchived).toList();
+          if (all.isEmpty) return const NoAccountsInvite();
+          final active = all
+              .where((b) => !b.account.isArchived && isPlainAccount(b.account))
+              .toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xxl),
             children: [

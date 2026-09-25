@@ -28,7 +28,16 @@ String describeError(Object error) {
 }
 
 /// Campo de un formulario al que pertenece un error de dominio.
-enum ErrorField { name, amount, transferAmount, account, destination, category, general }
+enum ErrorField {
+  name,
+  amount,
+  transferAmount,
+  account,
+  destination,
+  category,
+  cardSchedule,
+  general,
+}
 
 /// Decide en qué campo mostrar [error]. Lo que no pertenece a un campo
 /// concreto cae en [ErrorField.general] (se muestra como aviso del formulario).
@@ -45,6 +54,7 @@ ErrorField errorFieldOf(
     InvalidAmountException() => ErrorField.amount,
     InvalidInputException() || DuplicateNameException() => ErrorField.name,
     CategoryKindMismatchException() => ErrorField.category,
+    InvalidCardScheduleException() => ErrorField.cardSchedule,
     ArchivedAccountException(:final accountId) =>
       accountId == destinationAccountId && accountId != sourceAccountId
           ? ErrorField.destination

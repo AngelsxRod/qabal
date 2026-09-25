@@ -10,7 +10,6 @@ import '../design/app_card.dart';
 import '../design/tab_app_bar.dart';
 import '../design/tokens.dart';
 import '../design/typography.dart';
-import 'account_labels.dart';
 import 'account_row.dart';
 import 'account_totals.dart';
 import 'no_accounts_invite.dart';
@@ -54,7 +53,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       body: AsyncBody(
         value: balances,
         data: (all) {
-          final plain = all.where((b) => isPlainAccount(b.account)).toList();
+          final plain = all;
           if (plain.isEmpty) return const NoAccountsInvite();
           final visible = plain.where((b) => _showArchived || !b.account.isArchived).toList();
           return ListView(

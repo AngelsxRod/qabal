@@ -8,7 +8,6 @@ import '../../core/format/dates.dart';
 import '../../core/format/money_input.dart';
 import '../../domain/clock.dart';
 import '../../domain/errors.dart';
-import '../accounts/account_labels.dart';
 import '../categories/category_order.dart';
 import '../common/async_body.dart';
 import '../common/confirm_dialog.dart';
@@ -352,10 +351,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
     final accountsAsync = ref.watch(accountBalancesProvider(true));
     final accounts = accountsAsync.value == null
         ? null
-        : {
-            for (final b in accountsAsync.requireValue)
-              if (isPlainAccount(b.account)) b.account.id: b.account,
-          };
+        : {for (final b in accountsAsync.requireValue) b.account.id: b.account};
     final noAccounts = accounts != null && accounts.isEmpty;
     return Scaffold(
       appBar: AppBar(

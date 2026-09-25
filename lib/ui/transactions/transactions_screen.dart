@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/router.dart';
-import '../accounts/account_labels.dart';
 import '../accounts/no_accounts_invite.dart';
 import '../common/async_body.dart';
 import '../design/tab_app_bar.dart';
@@ -57,7 +56,7 @@ class TransactionsScreen extends ConsumerWidget {
       body: AsyncBody(
         value: accountsAsync,
         data: (balances) {
-          if (!balances.any((b) => isPlainAccount(b.account))) return const NoAccountsInvite();
+          if (balances.isEmpty) return const NoAccountsInvite();
           return Column(
             children: [
               if (!params.isEmpty)

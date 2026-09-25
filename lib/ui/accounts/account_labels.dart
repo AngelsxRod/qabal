@@ -18,9 +18,8 @@ IconData accountTypeIcon(AccountType type) => switch (type) {
   AccountType.creditCard => Icons.credit_card,
 };
 
-/// Cuentas que se manejan como saldo a favor. Las tarjetas de crédito tienen
-/// su propio flujo (todavía sin interfaz), así que las pantallas de cuentas y
-/// movimientos las dejan fuera.
+/// Cuentas que se manejan como saldo a favor. Las tarjetas de crédito llevan
+/// su deuda aparte: no entran en el saldo total, sino en la deuda de tarjetas.
 bool isPlainAccount(Account a) => a.type != AccountType.creditCard;
 
 /// Monedas que se ofrecen al crear una cuenta.

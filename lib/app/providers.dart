@@ -10,6 +10,7 @@ import '../data/repositories/models.dart';
 import '../data/repositories/tag_repository.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../domain/clock.dart';
+import 'day.dart';
 
 // Las pantallas importan solo este archivo: además de los providers, traen
 // las entidades y modelos de la capa de datos que necesitan.
@@ -124,6 +125,32 @@ final monthTotalsProvider = StreamProvider.autoDispose.family<List<PeriodTotals>
       .watch(transactionRepositoryProvider)
       .watchTotals(from: month, to: DateTime(month.year, month.month + 1)),
 );
+
+// Lecturas de tarjetas. Todas observan `dayProvider`: los días al corte, los
+// días al pago y el estado "Vencido" dependen de "hoy", así que al cambiar el
+// día se vuelve a calcular.
+
+/// Resumen de una tarjeta: deuda, crédito disponible y ciclo en curso.
+final cardOverviewProvider = StreamProvider.autoDispose.family<CardOverview, String>((ref, id) {
+  ref.watch(dayProvider);
+  return ref.watch(creditCardRepositoryProvider).watchOverview(id);
+});
+
+/// Estados de cuenta de una tarjeta (los archivados solo si se piden).
+final cardStatementsProvider = StreamProvider.autoDispose
+    .family<List<StatementView>, ({String cardId, bool includeArchived})>((ref, key) {
+      ref.watch(dayProvider);
+      return ref
+          .watch(creditCardRepositoryProvider)
+          .watchStatements(key.cardId, includeArchived: key.includeArchived);
+    });
+
+/// Estados de cuenta sin pagar por completo, de todas las tarjetas activas,
+/// por fecha de pago.
+final pendingStatementsProvider = StreamProvider.autoDispose<List<PendingStatement>>((ref) {
+  ref.watch(dayProvider);
+  return ref.watch(creditCardRepositoryProvider).watchPendingStatements();
+});
 
 /// Etiquetas de un movimiento.
 final transactionTagsProvider = FutureProvider.autoDispose
