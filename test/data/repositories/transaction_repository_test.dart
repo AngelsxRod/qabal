@@ -337,6 +337,30 @@ void main() {
       expect(page.single.amountMinor, 200);
     });
 
+    test('ordena por día descendente y, dentro del día, el último registrado arriba', () async {
+      await env.expense(cash.id, 100, DateTime(2026, 9, 5));
+      env.clock.current = DateTime(2026, 9, 1, 10, 0, 1);
+      await env.expense(cash.id, 200, DateTime(2026, 9, 5));
+      env.clock.current = DateTime(2026, 9, 1, 10, 0, 2);
+      await env.expense(cash.id, 300, DateTime(2026, 9, 8));
+      env.clock.current = DateTime(2026, 9, 1, 10, 0, 3);
+      await env.expense(cash.id, 400, DateTime(2026, 9, 5));
+
+      final all = await env.transactions.list(const TransactionFilter());
+      expect(all.map((t) => t.amountMinor), [300, 400, 200, 100]);
+      final ofCash = await env.transactions.list(TransactionFilter(accountId: cash.id));
+      expect(ofCash.map((t) => t.amountMinor), [300, 400, 200, 100]);
+    });
+
+    test('con el mismo instante de registro, el insertado después va arriba', () async {
+      await env.expense(cash.id, 100, DateTime(2026, 9, 5));
+      await env.expense(cash.id, 200, DateTime(2026, 9, 5));
+      await env.expense(cash.id, 300, DateTime(2026, 9, 5));
+
+      final all = await env.transactions.list(const TransactionFilter());
+      expect(all.map((t) => t.amountMinor), [300, 200, 100]);
+    });
+
     test('watch emite al insertar y al borrar', () async {
       final it = StreamIterator(env.transactions.watch(const TransactionFilter()));
       await it.moveNext();
