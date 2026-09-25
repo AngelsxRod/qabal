@@ -2,6 +2,7 @@ import 'package:finanzas/data/repositories/models.dart';
 import 'package:finanzas/app/router.dart';
 import 'package:finanzas/data/database/app_database.dart';
 import 'package:finanzas/domain/credit_card/statement_status.dart';
+import 'package:finanzas/ui/design/account_chips.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -258,11 +259,20 @@ void main() {
       }
 
       testWidgets('muestra el estado sugerido y el pago total lo salda', (tester) async {
+        await env.cash(name: 'Efectivo');
         final s = await officialStatement();
         await openPayment(tester);
 
         expect(find.text('ESTADO DE CUENTA'), findsOneWidget);
         expect(find.text('Corte 21 sep 2026'), findsOneWidget);
+        // La tarjeta a pagar es la primera de "Hacia", para que se vea elegida.
+        final destChips = find.byType(AccountChips).at(1);
+        expect(
+          tester.getTopLeft(find.descendant(of: destChips, matching: find.text('Visa'))).dx,
+          lessThan(
+            tester.getTopLeft(find.descendant(of: destChips, matching: find.text('Efectivo'))).dx,
+          ),
+        );
         expect(find.text('Saldo Q750.00 · pendiente Q750.00 · vence 15 oct'), findsOneWidget);
         await tester.tap(find.text('Pago total Q750.00'));
         await tester.pumpAndSettle();
