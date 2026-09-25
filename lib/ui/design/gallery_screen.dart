@@ -12,15 +12,19 @@ import 'category_avatar.dart';
 import 'category_picker.dart';
 import 'category_style.dart';
 import 'day_header.dart';
+import 'amount_row.dart';
 import 'empty_state.dart';
+import 'info_note.dart';
 import 'list_row.dart';
 import 'month_selector.dart';
 import 'picker_row.dart';
+import 'status_badge.dart';
 import 'style_choosers.dart';
 import 'tokens.dart';
 import 'transaction_row.dart';
 import 'type_switcher.dart';
 import 'typography.dart';
+import 'usage_bar.dart';
 
 /// Galería de componentes para revisar el diseño en claro y oscuro. Solo se
 /// enlaza desde "Más" en builds de depuración.
@@ -345,6 +349,46 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     onChanged: (v) => setState(() => _color = v),
                   ),
                 ],
+              ),
+            ),
+          ),
+          section(
+            'Tarjeta: uso, desglose y estado',
+            padded(
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const UsageBar(fraction: 0.35),
+                    const SizedBox(height: Space.xs),
+                    const UsageBar(fraction: 0.95),
+                    const SizedBox(height: Space.md),
+                    const AmountRow(label: 'Compras', minor: 75000, currency: 'GTQ'),
+                    AmountRow(
+                      label: 'Devoluciones',
+                      minor: 5000,
+                      currency: 'GTQ',
+                      showPlus: true,
+                      color: c.income,
+                      note: 'Ya restadas del estimado',
+                    ),
+                    const Divider(),
+                    const AmountRow(label: 'Estimado al corte', minor: 70000, currency: 'GTQ', strong: true),
+                    const SizedBox(height: Space.sm),
+                    Wrap(
+                      spacing: Space.sm,
+                      runSpacing: Space.sm,
+                      children: [
+                        StatusBadge(label: 'Pagado', tone: c.income),
+                        StatusBadge(label: 'Mínimo cubierto', tone: c.accent),
+                        StatusBadge(label: 'Pendiente', tone: c.textSecondary),
+                        StatusBadge(label: 'Vencido', tone: c.expense),
+                      ],
+                    ),
+                    const SizedBox(height: Space.md),
+                    const InfoNote(text: 'Próximo corte: 21 oct · Pago hasta: 15 nov'),
+                  ],
+                ),
               ),
             ),
           ),
