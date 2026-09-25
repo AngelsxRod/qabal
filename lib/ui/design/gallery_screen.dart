@@ -16,6 +16,7 @@ import 'empty_state.dart';
 import 'list_row.dart';
 import 'month_selector.dart';
 import 'picker_row.dart';
+import 'style_choosers.dart';
 import 'tokens.dart';
 import 'transaction_row.dart';
 import 'type_switcher.dart';
@@ -38,6 +39,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
   String? _category = 'default:food';
   int _tab = 1;
   DateTime _month = DateTime(2026, 9);
+  String _icon = 'restaurant';
+  Color _color = categoryColorChoices[0];
 
   @override
   void dispose() {
@@ -318,6 +321,28 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          section(
+            'Ícono y color de categoría',
+            padded(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconChooser(
+                    icons: categoryIconChoices.take(10).toList(),
+                    selected: _icon,
+                    color: adaptToBrightness(_color, brightness),
+                    onChanged: (v) => setState(() => _icon = v),
+                  ),
+                  const SizedBox(height: Space.lg),
+                  ColorChooser(
+                    colors: categoryColorChoices,
+                    selected: _color,
+                    onChanged: (v) => setState(() => _color = v),
                   ),
                 ],
               ),
