@@ -26,4 +26,9 @@ void main() {
       expect(formatDayHeader(DateTime(2025, 12, 31), DateTime(2026, 1, 1)), 'Ayer');
     });
   });
+
+  test('formatMonth escribe el mes completo con el año', () {
+    expect(formatMonth(DateTime(2026, 9, 24)), 'Septiembre 2026');
+    expect(formatMonth(DateTime(2027, 1, 1)), 'Enero 2027');
+  });
 }
