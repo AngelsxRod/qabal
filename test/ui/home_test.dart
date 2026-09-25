@@ -37,8 +37,9 @@ void main() {
     await env.cash(name: 'Dólares', currency: 'USD', initial: 5000);
     await pumpApp(tester, env);
 
-    expect(amount(10000, 'GTQ'), findsOneWidget);
-    expect(amount(5000, 'USD'), findsOneWidget);
+    // Saldo total, neto y la fila de la cuenta.
+    expect(amount(10000, 'GTQ'), findsNWidgets(3));
+    expect(amount(5000, 'USD'), findsNWidgets(3));
     await unmountApp(tester);
   });
 

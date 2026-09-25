@@ -5,23 +5,45 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../accounts/account_labels.dart';
+import '../accounts/account_row.dart';
 import '../accounts/account_totals.dart';
 import '../accounts/no_accounts_invite.dart';
-import '../accounts/total_balance_card.dart';
 import '../common/async_body.dart';
+import '../design/app_card.dart';
+import '../design/month_selector.dart';
 import '../design/quick_action.dart';
 import '../design/tab_app_bar.dart';
 import '../design/tokens.dart';
 import '../design/typography.dart';
+import 'balance_summary_card.dart';
+import 'month_summary_section.dart';
+import 'reserved_section.dart';
 
-/// Pantalla de inicio provisional: saldo total y acceso rápido a registrar.
-/// El resumen completo llega en la fase siguiente.
-class HomeScreen extends ConsumerWidget {
+/// Inicio: saldo total, deuda de tarjetas y neto por moneda, accesos rápidos,
+/// resumen del mes elegido y cuentas con su saldo.
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// Primer día del mes elegido; `null` sigue al mes en curso (y cambia solo
+  /// cuando cambia el día).
+  DateTime? _picked;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = ref.watch(dayProvider);
+    final current = DateTime(today.year, today.month);
+    final month = _picked ?? current;
     void open(TransactionType type) => context.push(Routes.transactionNewFor(type: type));
+    void moveMonth(int delta) {
+      final next = DateTime(month.year, month.month + delta);
+      setState(() => _picked = next == current ? null : next);
+    }
+
     return Scaffold(
       appBar: tabAppBar(context, 'Inicio'),
       body: AsyncBody(
@@ -29,10 +51,11 @@ class HomeScreen extends ConsumerWidget {
         data: (all) {
           final plain = all.where((b) => isPlainAccount(b.account)).toList();
           if (plain.isEmpty) return const NoAccountsInvite();
+          final active = plain.where((b) => !b.account.isArchived).toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xxl),
             children: [
-              TotalBalanceCard(totals: totalsByCurrency(plain)),
+              BalanceSummaryCard(totals: totalsByCurrency(all), cardDebts: cardDebtByCurrency(all)),
               const SizedBox(height: Space.xl),
               Text('REGISTRAR', style: context.text.label),
               const SizedBox(height: Space.sm),
@@ -54,6 +77,30 @@ class HomeScreen extends ConsumerWidget {
                     onTap: () => open(TransactionType.transfer),
                   ),
                 ],
+              ),
+              const SizedBox(height: Space.xl),
+              MonthSelector(
+                month: month,
+                onPrevious: () => moveMonth(-1),
+                onNext: month == current ? null : () => moveMonth(1),
+              ),
+              const SizedBox(height: Space.sm),
+              MonthSummarySection(month: month),
+              const ReservedSection(title: 'Próximos pagos'), // F3
+              const ReservedSection(title: 'Te deben / Debes'), // F4
+              const SizedBox(height: Space.xl),
+              Text('MIS CUENTAS', style: context.text.label),
+              const SizedBox(height: Space.sm),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < active.length; i++) ...[
+                      if (i > 0) Divider(indent: 72, color: context.colors.border),
+                      AccountRow(active[i]),
+                    ],
+                  ],
+                ),
               ),
             ],
           );

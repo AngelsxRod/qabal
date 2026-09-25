@@ -10,3 +10,14 @@ Map<String, int> totalsByCurrency(Iterable<AccountBalance> balances) {
   }
   return totals;
 }
+
+/// Deuda de tarjetas por moneda (tarjetas activas): lo que se debe, en
+/// positivo. Hasta que las tarjetas puedan crearse desde la interfaz es cero.
+Map<String, int> cardDebtByCurrency(Iterable<AccountBalance> balances) {
+  final debts = <String, int>{};
+  for (final b in balances) {
+    if (b.account.isArchived || b.account.type != AccountType.creditCard) continue;
+    debts[b.account.currency] = (debts[b.account.currency] ?? 0) - b.balanceMinor;
+  }
+  return debts;
+}

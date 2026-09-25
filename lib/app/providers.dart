@@ -117,6 +117,14 @@ final transactionsProvider = StreamProvider.autoDispose
       (ref, filter) => ref.watch(transactionRepositoryProvider).watch(filter),
     );
 
+/// Totales de ingresos y gastos por moneda del mes que empieza en [month]
+/// (primer día del mes, a medianoche). Incluye todas las cuentas.
+final monthTotalsProvider = StreamProvider.autoDispose.family<List<PeriodTotals>, DateTime>(
+  (ref, month) => ref
+      .watch(transactionRepositoryProvider)
+      .watchTotals(from: month, to: DateTime(month.year, month.month + 1)),
+);
+
 /// Etiquetas de un movimiento.
 final transactionTagsProvider = FutureProvider.autoDispose
     .family<List<Tag>, String>(
