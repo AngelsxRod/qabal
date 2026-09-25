@@ -183,6 +183,8 @@ void main() {
       await env.cash(name: 'Dólares', currency: 'USD', initial: 5000);
       await env.card(initial: -30000);
       await pumpApp(tester, env);
+      // Las cuentas quedan más abajo que la tarjeta de Próximos pagos.
+      await tester.scrollUntilVisible(find.text('Dólares'), 300);
 
       expect(find.text('Deuda de tarjetas'), findsNWidgets(2)); // una por moneda
       expect(find.text('Neto'), findsNWidgets(2));

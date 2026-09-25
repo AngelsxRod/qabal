@@ -71,16 +71,15 @@ class StatementDetailScreen extends ConsumerWidget {
               itemBuilder: (_) => [
                 PopupMenuItem<void>(
                   onTap: () => _setArchived(context, ref, !view.statement.isArchived),
-                  child: Text(
-                    view.statement.isArchived ? 'Restaurar estado' : 'Archivar estado',
-                  ),
+                  child: Text(view.statement.isArchived ? 'Restaurar estado' : 'Archivar estado'),
                 ),
               ],
             ),
           ],
         ],
       ),
-      bottomNavigationBar: view == null || view.statement.isArchived || view.status == StatementStatus.paid
+      bottomNavigationBar:
+          view == null || view.statement.isArchived || view.status == StatementStatus.paid
           ? null
           : BottomActionBar(
               child: AppButton(
@@ -91,8 +90,10 @@ class StatementDetailScreen extends ConsumerWidget {
                     type: TransactionType.transfer,
                     destinationId: cardId,
                     statementId: statementId,
-                    amountMinor: (view.statement.statementBalanceMinor - view.paidMinor)
-                        .clamp(0, 1 << 62),
+                    amountMinor: (view.statement.statementBalanceMinor - view.paidMinor).clamp(
+                      0,
+                      1 << 62,
+                    ),
                   ),
                 ),
               ),
@@ -217,10 +218,18 @@ class _Header extends ConsumerWidget {
             child: Column(
               children: [
                 if (m.openingDebtMinor != 0)
-                  AmountRow(label: 'Deuda arrastrada', minor: m.openingDebtMinor, currency: currency),
+                  AmountRow(
+                    label: 'Deuda arrastrada',
+                    minor: m.openingDebtMinor,
+                    currency: currency,
+                  ),
                 AmountRow(label: 'Compras', minor: m.purchasesMinor, currency: currency),
                 if (m.interestMinor != 0)
-                  AmountRow(label: 'Intereses y cargos', minor: m.interestMinor, currency: currency),
+                  AmountRow(
+                    label: 'Intereses y cargos',
+                    minor: m.interestMinor,
+                    currency: currency,
+                  ),
                 if (m.cashAdvancesMinor != 0)
                   AmountRow(
                     label: 'Avances de efectivo',

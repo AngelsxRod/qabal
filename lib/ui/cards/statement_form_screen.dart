@@ -210,7 +210,9 @@ class _StatementFormScreenState extends ConsumerState<StatementFormScreen> {
     final t = context.text;
     final official = parseInputMinor(_balance.text.trim());
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Editar estado de cuenta' : 'Nuevo estado de cuenta')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Editar estado de cuenta' : 'Nuevo estado de cuenta'),
+      ),
       bottomNavigationBar: _loading
           ? null
           : BottomActionBar(

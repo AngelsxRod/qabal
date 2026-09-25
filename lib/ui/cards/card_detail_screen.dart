@@ -82,9 +82,7 @@ class _Header extends ConsumerWidget {
     final cycle = overview.summary;
     final today = ref.watch(dayProvider);
     final limit = overview.settings.creditLimitMinor;
-    final statements = ref.watch(
-      cardStatementsProvider((cardId: a.id, includeArchived: false)),
-    );
+    final statements = ref.watch(cardStatementsProvider((cardId: a.id, includeArchived: false)));
 
     void open({
       required TransactionType type,
@@ -202,10 +200,7 @@ class _Header extends ConsumerWidget {
                   style: t.bodyStrong,
                 ),
                 const SizedBox(height: Space.sm),
-                _KeyValue(
-                  'Corte ${formatDayMonth(cycle.cycle.closingDate)}',
-                  daysLabel(toClosing),
-                ),
+                _KeyValue('Corte ${formatDayMonth(cycle.cycle.closingDate)}', daysLabel(toClosing)),
                 _KeyValue('Pago hasta ${formatDayMonth(cycle.cycle.dueDate)}', daysLabel(toDue)),
                 const Divider(height: Space.xl),
                 if (m.openingDebtMinor != 0)
@@ -214,7 +209,11 @@ class _Header extends ConsumerWidget {
                 if (m.interestMinor != 0)
                   AmountRow(label: 'Intereses y cargos', minor: m.interestMinor, currency: cur),
                 if (m.cashAdvancesMinor != 0)
-                  AmountRow(label: 'Avances de efectivo', minor: m.cashAdvancesMinor, currency: cur),
+                  AmountRow(
+                    label: 'Avances de efectivo',
+                    minor: m.cashAdvancesMinor,
+                    currency: cur,
+                  ),
                 if (m.refundsMinor != 0)
                   AmountRow(
                     label: 'Devoluciones',
@@ -264,10 +263,7 @@ class _Header extends ConsumerWidget {
             data: (list) => list.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.only(bottom: Space.sm),
-                    child: Text(
-                      'Aún no registras ningún estado de cuenta.',
-                      style: t.caption,
-                    ),
+                    child: Text('Aún no registras ningún estado de cuenta.', style: t.caption),
                   )
                 : AppCard(
                     padding: EdgeInsets.zero,

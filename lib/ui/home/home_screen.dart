@@ -18,6 +18,7 @@ import '../design/typography.dart';
 import 'balance_summary_card.dart';
 import 'month_summary_section.dart';
 import 'reserved_section.dart';
+import 'upcoming_payments_section.dart';
 
 /// Inicio: saldo total, deuda de tarjetas y neto por moneda, accesos rápidos,
 /// resumen del mes elegido y cuentas con su saldo.
@@ -50,6 +51,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         value: ref.watch(accountBalancesProvider(true)),
         data: (all) {
           if (all.isEmpty) return const NoAccountsInvite();
+          final cards = [
+            for (final b in all)
+              if (!b.account.isArchived && b.account.type == AccountType.creditCard) b.account,
+          ];
           final active = all
               .where((b) => !b.account.isArchived && isPlainAccount(b.account))
               .toList();
@@ -87,7 +92,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: Space.sm),
               MonthSummarySection(month: month),
-              const ReservedSection(title: 'Próximos pagos'), // F3
+              ReservedSection(
+                title: 'Próximos pagos',
+                visible: cards.isNotEmpty,
+                child: UpcomingPayments(cards: cards),
+              ),
               const ReservedSection(title: 'Te deben / Debes'), // F4
               const SizedBox(height: Space.xl),
               Text('MIS CUENTAS', style: context.text.label),

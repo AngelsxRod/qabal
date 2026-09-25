@@ -6,7 +6,7 @@ import '../design/typography.dart';
 /// Espacio de Inicio reservado para una fase posterior. Mientras [visible]
 /// sea `false` no ocupa lugar; al activarse muestra [title] y [child].
 ///
-/// - "Próximos pagos": F3 (tarjetas).
+/// - "Próximos pagos": activo desde F3 (tarjetas).
 /// - "Te deben / Debes": F4 (deudas).
 class ReservedSection extends StatelessWidget {
   const ReservedSection({super.key, required this.title, this.child, this.visible = false});
