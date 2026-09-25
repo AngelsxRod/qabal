@@ -22,7 +22,8 @@ class AppListRow extends StatelessWidget {
   final String? subtitle;
   final Widget? leading;
 
-  /// Elemento final; sin él y con [onTap], una flecha.
+  /// Elemento final (fuera de la zona tocable de la fila); sin él y con [onTap],
+  /// una flecha.
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool dimmed;
@@ -33,7 +34,7 @@ class AppListRow extends StatelessWidget {
     final c = context.colors;
     final t = context.text;
     final muted = onTap == null || dimmed;
-    return Semantics(
+    final body = Semantics(
       button: onTap != null,
       label: subtitle == null ? title : '$title, $subtitle',
       excludeSemantics: true,
@@ -42,7 +43,12 @@ class AppListRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: minHeight),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: Space.sm),
+            padding: EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.sm,
+              trailing == null ? Space.lg : Space.xs,
+              Space.sm,
+            ),
             child: Row(
               children: [
                 if (leading != null) ...[leading!, const SizedBox(width: Space.md)],
@@ -62,16 +68,25 @@ class AppListRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: Space.md),
-                  trailing!,
-                ] else if (onTap != null)
+                if (trailing == null && onTap != null)
                   Icon(Icons.chevron_right_rounded, color: c.textTertiary),
               ],
             ),
           ),
         ),
       ),
+    );
+    if (trailing == null) return body;
+    // El elemento final queda fuera de la zona tocable de la fila para que
+    // conserve su propia semántica (por ejemplo, un botón de archivar).
+    return Row(
+      children: [
+        Expanded(child: body),
+        Padding(
+          padding: const EdgeInsets.only(right: Space.sm),
+          child: trailing,
+        ),
+      ],
     );
   }
 }
