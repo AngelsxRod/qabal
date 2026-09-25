@@ -284,10 +284,12 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
+          : SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(Space.gutter, Space.sm, Space.gutter, Space.xl),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 if (_generalError != null) ...[
                   Text(_generalError!, style: t.caption.copyWith(color: c.danger)),
                   const SizedBox(height: Space.md),
@@ -397,7 +399,8 @@ class _AccountFormScreenState extends ConsumerState<AccountFormScreen> {
                     ),
                   ),
                 ],
-              ],
+                ],
+              ),
             ),
     );
   }
