@@ -552,6 +552,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
       setState(() {});
     }
 
+    final firstDestinationId = _existing?.transferAccountId ?? widget.initialDestinationId;
     final categoriesById = {for (final x in categories) x.id: x};
     final kind = _type == TransactionType.income ? CategoryKind.income : CategoryKind.expense;
     final visibleCategories = orderForPicker([
@@ -684,10 +685,12 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
           label('HACIA'),
           AccountChips(
             accounts: [
+              // Primero el destino que ya viene elegido (al editar, o al pagar una
+              // tarjeta), para que se vea.
               for (final a in selectableAccounts)
-                if (a.id != _accountId && a.id == _existing?.transferAccountId) a,
+                if (a.id != _accountId && a.id == firstDestinationId) a,
               for (final a in selectableAccounts)
-                if (a.id != _accountId && a.id != _existing?.transferAccountId) a,
+                if (a.id != _accountId && a.id != firstDestinationId) a,
             ],
             selectedId: _destinationId,
             errorText: _errors[ErrorField.destination],
