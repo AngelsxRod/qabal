@@ -388,4 +388,98 @@ void main() {
     expect(it.current.availableCreditMinor, 988000);
     await it.cancel();
   });
+
+  group('estimatedBalanceAt', () {
+    test('devuelve la deuda al final del día de corte, sin las compras posteriores', () async {
+      await purchases();
+      expect(await env.cards.estimatedBalanceAt(visa.id, DateTime(2026, 9, 21)), 75000);
+      expect(await env.cards.estimatedBalanceAt(visa.id, DateTime(2026, 9, 20)), 60000);
+      expect(await env.cards.estimatedBalanceAt(visa.id, DateTime(2026, 9, 22)), 115000);
+      expect(await env.cards.estimatedBalanceAt(visa.id, DateTime(2026, 8, 21)), 0);
+    });
+
+    test('incluye la deuda inicial y descuenta pagos', () async {
+      final other = await env.card(name: 'Master', initial: -20000);
+      await env.expense(other.id, 5000, DateTime(2026, 9, 10));
+      await env.transfer(bank.id, other.id, 8000, DateTime(2026, 9, 15));
+      expect(await env.cards.estimatedBalanceAt(other.id, DateTime(2026, 9, 21)), 17000);
+    });
+
+    test('falla si la cuenta no es una tarjeta', () async {
+      await expectLater(
+          env.cards.estimatedBalanceAt(bank.id, DateTime(2026, 9, 21)),
+          throwsA(isA<NotACreditCardException>()));
+    });
+
+    test('coincide con el estimado de statementView', () async {
+      await purchases();
+      final s = await officialSeptember();
+      expect((await env.cards.statementView(s.id)).estimatedBalanceMinor,
+          await env.cards.estimatedBalanceAt(visa.id, s.closingDate));
+    });
+  });
+
+  group('pendingStatements', () {
+    Future<CreditCardStatement> statementFor(Account card, DateTime closing, int balance) =>
+        env.cards.registerStatement(StatementInput(
+            accountId: card.id,
+            closingDate: closing,
+            statementBalanceMinor: balance,
+            minimumPaymentMinor: balance ~/ 10));
+
+    test('lista los no pagados de todas las tarjetas por fecha de pago', () async {
+      final master = await env.card(name: 'Master', statementDay: 5, dueDay: 25);
+      await purchases();
+      await officialSeptember(); // pago 15 oct
+      await statementFor(master, DateTime(2026, 9, 5), 30000); // pago 25 sep
+
+      final pending = await env.cards.pendingStatements();
+      expect(pending.map((p) => p.card.name), ['Master', 'Visa']);
+      expect(pending.first.pendingMinor, 30000);
+      expect(pending.last.pendingMinor, 75000);
+      expect(pending.last.minimumPendingMinor, 7500);
+    });
+
+    test('sale de la lista al pagarse por completo y descuenta lo pagado', () async {
+      await purchases();
+      final s = await officialSeptember();
+      await env.transfer(bank.id, visa.id, 7500, DateTime(2026, 9, 30));
+      var pending = await env.cards.pendingStatements();
+      expect(pending.single.status, StatementStatus.minimumCovered);
+      expect(pending.single.pendingMinor, 67500);
+      expect(pending.single.minimumPendingMinor, 0);
+
+      await env.transfer(bank.id, visa.id, 67500, DateTime(2026, 9, 30));
+      pending = await env.cards.pendingStatements();
+      expect(pending, isEmpty);
+      expect((await env.cards.statementView(s.id)).status, StatementStatus.paid);
+    });
+
+    test('ignora estados archivados y tarjetas archivadas; marca los vencidos', () async {
+      await purchases();
+      final s = await officialSeptember();
+      env.clock.current = DateTime(2026, 10, 16, 9);
+      expect((await env.cards.pendingStatements()).single.status, StatementStatus.overdue);
+
+      await env.cards.setStatementArchived(s.id, true);
+      expect(await env.cards.pendingStatements(), isEmpty);
+      await env.cards.setStatementArchived(s.id, false);
+      await env.accounts.update(visa.id, isArchived: true);
+      expect(await env.cards.pendingStatements(), isEmpty);
+    });
+
+    test('watchPendingStatements emite al registrar y al pagar', () async {
+      await purchases();
+      final it = StreamIterator(env.cards.watchPendingStatements());
+      await it.moveNext();
+      expect(it.current, isEmpty);
+      await officialSeptember();
+      await it.moveNext();
+      expect(it.current, hasLength(1));
+      await env.transfer(bank.id, visa.id, 75000, DateTime(2026, 9, 30));
+      await it.moveNext();
+      expect(it.current, isEmpty);
+      await it.cancel();
+    });
+  });
 }
