@@ -142,6 +142,8 @@ class TransactionRepository {
     q.orderBy([
       (t) => OrderingTerm.desc(t.occurredAt),
       (t) => OrderingTerm.desc(t.createdAt),
+      // `createdAt` se guarda en segundos: en un empate, el último insertado va arriba.
+      (t) => OrderingTerm.desc(const CustomExpression<int>('transactions.rowid')),
     ]);
     if (f.limit != null) q.limit(f.limit!, offset: f.offset);
     return q;
