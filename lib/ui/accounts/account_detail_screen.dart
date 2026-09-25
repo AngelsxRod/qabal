@@ -5,13 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../app/router.dart';
 import '../common/async_body.dart';
-import '../common/confirm_dialog.dart';
-import '../common/describe_error.dart';
 import '../design/amount_text.dart';
 import '../design/quick_action.dart';
 import '../design/tokens.dart';
 import '../design/typography.dart';
 import '../transactions/transaction_list.dart';
+import 'account_archive.dart';
 import 'account_labels.dart';
 
 /// Saldo de una cuenta y sus movimientos agrupados por día.
@@ -19,27 +18,6 @@ class AccountDetailScreen extends ConsumerWidget {
   const AccountDetailScreen({super.key, required this.accountId});
 
   final String accountId;
-
-  Future<void> _setArchived(BuildContext context, WidgetRef ref, bool archived) async {
-    if (archived) {
-      final ok = await confirmAction(
-        context,
-        title: 'Archivar cuenta',
-        message:
-            'La cuenta dejará de ofrecerse para nuevos movimientos, pero conserva su '
-            'historial y puedes restaurarla cuando quieras.',
-        confirmLabel: 'Archivar',
-      );
-      if (!ok || !context.mounted) return;
-    }
-    try {
-      await ref.read(accountRepositoryProvider).update(accountId, isArchived: archived);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,7 +37,7 @@ class AccountDetailScreen extends ConsumerWidget {
               tooltip: 'Más opciones',
               itemBuilder: (_) => [
                 PopupMenuItem<void>(
-                  onTap: () => _setArchived(context, ref, !account.isArchived),
+                  onTap: () => setAccountArchived(context, ref, accountId, !account.isArchived),
                   child: Text(account.isArchived ? 'Restaurar cuenta' : 'Archivar cuenta'),
                 ),
               ],

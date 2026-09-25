@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import 'providers.dart';
 
-import '../ui/accounts/account_detail_screen.dart';
+import '../ui/accounts/account_entry_screen.dart';
 import '../ui/accounts/account_form_screen.dart';
 import '../ui/accounts/accounts_screen.dart';
+import '../ui/cards/statement_detail_screen.dart';
+import '../ui/cards/statement_form_screen.dart';
 import '../ui/catalog/contacts_screen.dart';
 import '../ui/categories/categories_screen.dart';
 import '../ui/categories/category_form_screen.dart';
@@ -44,6 +46,10 @@ abstract final class Routes {
   static const accountNew = '/cuentas/nueva';
   static String accountDetail(String id) => '/cuentas/$id';
   static String accountEdit(String id) => '/cuentas/$id/editar';
+
+  static String statementNew(String cardId) => '/cuentas/$cardId/estados/nuevo';
+  static String statementDetail(String cardId, String id) => '/cuentas/$cardId/estados/$id';
+  static String statementEdit(String cardId, String id) => '/cuentas/$cardId/estados/$id/editar';
 
   static const transactionNew = '/movimientos/nuevo';
   static String transactionEdit(String id) => '/movimientos/$id';
@@ -127,12 +133,36 @@ GoRouter buildRouter({String initialLocation = Routes.home}) => GoRouter(
                 GoRoute(
                   path: 'nueva',
                   parentNavigatorKey: rootNavigatorKey,
-                  builder: (_, _) => const AccountFormScreen(),
+                  builder: (_, state) => AccountFormScreen(
+                    initialType: AccountType.values.asNameMap()[state.uri.queryParameters['tipo']],
+                  ),
                 ),
                 GoRoute(
                   path: ':id',
-                  builder: (_, state) =>
-                      AccountDetailScreen(accountId: state.pathParameters['id']!),
+                  builder: (_, state) => AccountEntryScreen(accountId: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(
+                      path: 'estados/nuevo',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (_, state) =>
+                          StatementFormScreen(cardId: state.pathParameters['id']!),
+                    ),
+                    GoRoute(
+                      path: 'estados/:sid',
+                      builder: (_, state) => StatementDetailScreen(
+                        cardId: state.pathParameters['id']!,
+                        statementId: state.pathParameters['sid']!,
+                      ),
+                    ),
+                    GoRoute(
+                      path: 'estados/:sid/editar',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (_, state) => StatementFormScreen(
+                        cardId: state.pathParameters['id']!,
+                        statementId: state.pathParameters['sid'],
+                      ),
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: ':id/editar',
