@@ -3,6 +3,7 @@ package com.draskint.qabal.data.local
 import android.database.sqlite.SQLiteConstraintException
 import com.draskint.qabal.data.local.entity.CreditCardDetailsEntity
 import com.draskint.qabal.data.local.entity.CreditCardStatementEntity
+import com.draskint.qabal.data.local.trigger.IntegrityTriggers
 import com.draskint.qabal.domain.model.AccountType
 import com.draskint.qabal.domain.model.TransactionType
 import java.time.LocalDate
@@ -135,4 +136,16 @@ class IntegrityTriggersTest : DatabaseTestBase() {
             closingDate = LocalDate.of(2026, 10, 15), dueDate = LocalDate.of(2026, 11, 5),
             statementBalanceMinor = balance, minimumPaymentMinor = minimum, createdAt = now, updatedAt = now,
         )
+
+    @Test
+    fun `reabrir la base reemplaza un trigger con una definicion vieja`() = runBlocking<Unit> {
+        val sqlite = db.openHelper.writableDatabase
+        sqlite.execSQL("DROP TRIGGER trg_transactions_amount_positive_insert")
+        db.transactionDao().insert(tx("t", "a", amount = 0)) // sin el trigger se acepta
+
+        DatabaseCallback(clock).onOpen(sqlite)
+
+        assertRejected { db.transactionDao().insert(tx("t2", "a", amount = 0)) }
+        assertEquals(IntegrityTriggers.statements().size, IntegrityTriggers.dropStatements().size)
+    }
 }
