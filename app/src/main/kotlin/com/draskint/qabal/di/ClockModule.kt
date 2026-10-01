@@ -1,4 +1,4 @@
-package com.draskint.finanzas.di
+package com.draskint.qabal.di
 
 import dagger.Module
 import dagger.Provides

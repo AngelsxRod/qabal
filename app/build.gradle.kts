@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.draskint.finanzas"
+    namespace = "com.draskint.qabal"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.draskint.finanzas"
+        applicationId = "com.draskint.qabal"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

@@ -1,4 +1,4 @@
-package com.draskint.finanzas
+package com.draskint.qabal
 
 import androidx.activity.ComponentActivity
 import dagger.hilt.android.AndroidEntryPoint

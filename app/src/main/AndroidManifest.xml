@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:name=".FinanzasApp"
+        android:name=".QabalApp"
         android:allowBackup="false"
-        android:label="Finanzas"
+        android:label="qabal"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
