@@ -4,6 +4,7 @@ import com.draskint.qabal.data.local.entity.AccountEntity
 import com.draskint.qabal.data.local.entity.CategoryEntity
 import com.draskint.qabal.data.local.entity.ContactEntity
 import com.draskint.qabal.data.local.entity.CreditCardDetailsEntity
+import com.draskint.qabal.data.local.entity.CreditCardStatementEntity
 import com.draskint.qabal.data.local.entity.DebtEntity
 import com.draskint.qabal.data.local.entity.TagEntity
 import com.draskint.qabal.data.local.entity.TransactionEntity
@@ -11,6 +12,7 @@ import com.draskint.qabal.domain.model.Account
 import com.draskint.qabal.domain.model.Category
 import com.draskint.qabal.domain.model.Contact
 import com.draskint.qabal.domain.model.CreditCardSettings
+import com.draskint.qabal.domain.model.CreditCardStatement
 import com.draskint.qabal.domain.model.Debt
 import com.draskint.qabal.domain.model.Tag
 import com.draskint.qabal.domain.model.Transaction
@@ -50,4 +52,10 @@ fun DebtEntity.toDomain() = Debt(
     id = id, contactId = contactId, direction = direction, principalMinor = principalMinor, currency = currency,
     description = description, startDate = startDate, dueDate = dueDate, status = status, isArchived = isArchived,
     createdAt = createdAt, updatedAt = updatedAt,
+)
+
+fun CreditCardStatementEntity.toDomain() = CreditCardStatement(
+    id = id, accountId = accountId, periodStart = periodStart, closingDate = closingDate, dueDate = dueDate,
+    statementBalanceMinor = statementBalanceMinor, minimumPaymentMinor = minimumPaymentMinor, note = note,
+    isArchived = isArchived, createdAt = createdAt, updatedAt = updatedAt,
 )

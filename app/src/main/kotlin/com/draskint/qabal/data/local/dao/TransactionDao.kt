@@ -7,6 +7,8 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.draskint.qabal.data.local.entity.TransactionEntity
 import com.draskint.qabal.data.local.entity.TransactionTagCrossRef
+import com.draskint.qabal.data.local.relation.CycleSumsRow
+import com.draskint.qabal.data.local.relation.StatementPaidRow
 import com.draskint.qabal.data.local.relation.TransactionWithDetails
 import com.draskint.qabal.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
@@ -70,6 +72,52 @@ interface TransactionDao {
     /** Suma por tipo de los movimientos de una deuda; el repositorio decide cuáles son abonos. */
     @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE debtId = :debtId AND type = :type")
     fun observeSumByDebtAndType(debtId: String, type: TransactionType): Flow<Long>
+
+    // --- Consultas de tarjetas ---
+
+    /**
+     * Saldo de la cuenta con los movimientos anteriores a [before] (epoch ms; `Long.MAX_VALUE` = todos).
+     * Misma composición que `AccountDao.observeBalances`. Nulo si la cuenta no existe.
+     */
+    @Query(
+        "SELECT a.initialBalanceMinor " +
+            "+ COALESCE((SELECT SUM(CASE t.type WHEN 'INCOME' THEN t.amountMinor ELSE -t.amountMinor END) " +
+            "FROM transactions t WHERE t.accountId = a.id AND t.occurredAt < :before), 0) " +
+            "+ COALESCE((SELECT SUM(COALESCE(t.transferAmountMinor, t.amountMinor)) " +
+            "FROM transactions t WHERE t.transferAccountId = a.id AND t.occurredAt < :before), 0) " +
+            "FROM accounts a WHERE a.id = :accountId",
+    )
+    suspend fun getBalanceBefore(accountId: String, before: Long): Long?
+
+    /**
+     * Movimientos de la tarjeta con `[start, end)` en epoch ms. [interestId] y [refundsId] son las
+     * categorías del sistema «Intereses y cargos» y «Devoluciones».
+     */
+    @Query(
+        "SELECT " +
+            "COALESCE(SUM(CASE WHEN t.accountId = :cardId AND t.type = 'EXPENSE' " +
+            "AND COALESCE(t.categoryId, '') <> :interestId THEN t.amountMinor END), 0) AS purchases, " +
+            "COALESCE(SUM(CASE WHEN t.accountId = :cardId AND t.type = 'EXPENSE' " +
+            "AND t.categoryId = :interestId THEN t.amountMinor END), 0) AS interest, " +
+            "COALESCE(SUM(CASE WHEN t.accountId = :cardId AND t.type = 'TRANSFER' " +
+            "THEN t.amountMinor END), 0) AS advances, " +
+            "COALESCE(SUM(CASE WHEN t.accountId = :cardId AND t.type = 'INCOME' " +
+            "AND t.categoryId = :refundsId THEN t.amountMinor END), 0) AS refunds, " +
+            "COALESCE(SUM(CASE WHEN t.accountId = :cardId AND t.type = 'INCOME' " +
+            "AND COALESCE(t.categoryId, '') <> :refundsId THEN t.amountMinor END), 0) AS otherCredits, " +
+            "COALESCE(SUM(CASE WHEN t.transferAccountId = :cardId " +
+            "THEN COALESCE(t.transferAmountMinor, t.amountMinor) END), 0) AS payments " +
+            "FROM transactions t WHERE (t.accountId = :cardId OR t.transferAccountId = :cardId) " +
+            "AND t.occurredAt >= :start AND t.occurredAt < :end",
+    )
+    suspend fun getCycleSums(cardId: String, interestId: String, refundsId: String, start: Long, end: Long): CycleSumsRow
+
+    /** Suma de los pagos vinculados (`statementId`) a cada estado de cuenta. */
+    @Query(
+        "SELECT statementId, SUM(COALESCE(transferAmountMinor, amountMinor)) AS paidMinor " +
+            "FROM transactions WHERE statementId IN (:statementIds) GROUP BY statementId",
+    )
+    suspend fun getPaidByStatement(statementIds: List<String>): List<StatementPaidRow>
 
     // --- Etiquetas ---
 
