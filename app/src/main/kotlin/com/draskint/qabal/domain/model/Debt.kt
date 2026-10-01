@@ -28,8 +28,13 @@ data class DebtInput(
     val dueDate: LocalDate? = null,
 )
 
-/** Deuda con lo abonado hasta ahora; `pendiente = principal − abonos` (puede quedar negativo si se paga de más). */
+/** Deuda con lo abonado hasta ahora (no incluye el movimiento de origen). */
 data class DebtBalance(val debt: Debt, val paidMinor: Long) {
-    val pendingMinor: Long get() = debt.principalMinor - paidMinor
-    val isFullyPaid: Boolean get() = pendingMinor <= 0
+    /** `principal − abonos`, nunca negativo. */
+    val pendingMinor: Long get() = maxOf(debt.principalMinor - paidMinor, 0)
+
+    /** Lo abonado de más sobre el principal. */
+    val excessMinor: Long get() = maxOf(paidMinor - debt.principalMinor, 0)
+
+    val isFullyPaid: Boolean get() = pendingMinor == 0L
 }

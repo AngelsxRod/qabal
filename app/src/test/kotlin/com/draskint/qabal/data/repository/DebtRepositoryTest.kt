@@ -164,4 +164,15 @@ class DebtRepositoryTest : RepositoryTestBase() {
         assertEquals(500, debts.observe().first().single().paidMinor)
         assertFails<NotFoundException> { debts.setArchived("nope", true) }
     }
+
+    @Test
+    fun `un abono de mas queda como excedente y no como saldo negativo`() = runBlocking<Unit> {
+        val acc = newAccount()
+        val d = debts.create(input(DebtDirection.I_OWE, 1_000))
+        transactions.create(payment(acc.id, d.id, TransactionType.EXPENSE, 1_500))
+        val b = debts.balance(d.id)
+        assertEquals(0, b.pendingMinor)
+        assertEquals(500, b.excessMinor)
+        assertTrue(b.isFullyPaid)
+    }
 }
