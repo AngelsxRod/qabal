@@ -26,6 +26,12 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE isArchived = :archived ORDER BY name")
     fun observeAll(archived: Boolean = false): Flow<List<TagEntity>>
 
+    @Query("SELECT * FROM tags WHERE :includeArchived OR isArchived = 0 ORDER BY name")
+    suspend fun list(includeArchived: Boolean): List<TagEntity>
+
+    @Query("SELECT * FROM tags WHERE :includeArchived OR isArchived = 0 ORDER BY name")
+    fun observeList(includeArchived: Boolean): Flow<List<TagEntity>>
+
     @Query("UPDATE tags SET isArchived = :archived, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setArchived(id: String, archived: Boolean, updatedAt: Long)
 }

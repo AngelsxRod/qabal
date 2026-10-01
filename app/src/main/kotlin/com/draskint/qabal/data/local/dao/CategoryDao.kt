@@ -27,6 +27,19 @@ interface CategoryDao {
     @Query("SELECT * FROM categories WHERE id = :id")
     suspend fun getById(id: String): CategoryEntity?
 
+    /** Todas las categorías (raíz y subcategorías); [kind] nulo = de cualquier tipo. */
+    @Query(
+        "SELECT * FROM categories WHERE (:kind IS NULL OR kind = :kind) AND (:includeArchived OR isArchived = 0) " +
+            "ORDER BY name COLLATE NOCASE",
+    )
+    suspend fun list(kind: CategoryKind?, includeArchived: Boolean): List<CategoryEntity>
+
+    @Query(
+        "SELECT * FROM categories WHERE (:kind IS NULL OR kind = :kind) AND (:includeArchived OR isArchived = 0) " +
+            "ORDER BY name COLLATE NOCASE",
+    )
+    fun observeList(kind: CategoryKind?, includeArchived: Boolean): Flow<List<CategoryEntity>>
+
     /** Categorías raíz de un tipo, cada una con sus subcategorías. */
     @Transaction
     @Query(
