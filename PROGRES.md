@@ -3,7 +3,7 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (135 tests en total). La capa de datos queda completa. Sistema de diseño base listo. **Objetivo inmediato:** navegación type-safe con barra inferior y botón central `+`.
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (140 tests en total). La capa de datos queda completa. Sistema de diseño base listo. **Objetivo inmediato:** navegación type-safe con barra inferior y botón central `+`.
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
@@ -44,19 +44,17 @@ Hitos funcionales (paridad con la app Flutter):
 - Room no soporta `CHECK`: las invariantes se validan en dominio y repositorio, y las críticas con triggers.
 - Los repositorios reciben `Clock` para fijar el tiempo en tests. Estado con `StateFlow` inmutable.
 - **Esquema de referencia:** el Drift original está en el historial. Ejemplo: `git show 090c7bc^:lib/data/database/tables/transactions.dart`. Lo mismo vale para `seed.dart` y `lib/domain/credit_card/`.
+- Los triggers de integridad se reinstalan en cada apertura (`DatabaseCallback.onOpen`): cambiar una regla en `IntegrityTriggers` basta, sin tocar migraciones.
+- Al agregar un plugin de Gradle (Compose, serialization...), comprobar que su versión sea compatible con AGP 9.4.1 (Kotlin integrado 2.3.x) y KSP 2.3.12.
+- Los textos y el campo de formulario de cada `DomainException` viven en `ui/error/ErrorMessages.kt` (`describeError`, `errorFieldOf`, `when` exhaustivo).
 - Identidad: wordmark `qabal` en minúsculas, Inter, monocromo (`#FFFFFF`/`#0A0A0A`, bordes `#E5E5E5`/`#1A1A1A`), ingresos y gastos por opacidad, sin íconos cliché ni sombras difuminadas.
 
 ## ⚠️ Problemas Conocidos / Bloqueos (Blockers)
-- 🟡 `describeError`/`errorFieldOf` del Flutter (texto y campo de formulario por `DomainException`) se portan con la UI, no están en `domain/`; usar un `when` exhaustivo.
-- 🟡 Los triggers se crean solo en `onCreate`: si una migración cambia una regla, debe hacer `DROP TRIGGER` y recrearlo.
-- 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.4.1 y KSP 2.3.12.
-- 🟡 Tras renombrar paquetes o clases, el build incremental falla con código generado viejo: usar `./gradlew clean assembleDebug`.
-- 🟢 Sin bloqueos externos.
-
+- 🟢 Sin bloqueos.
 
 ## 🧰 Comandos útiles
 ```bash
 ./gradlew assembleDebug        # compila
 ./gradlew testDebugUnitTest    # pruebas unitarias
-./gradlew clean assembleDebug  # build limpio
+./gradlew clean assembleDebug  # build limpio (obligatorio tras renombrar paquetes o clases: el incremental falla con código generado viejo)
 ```
