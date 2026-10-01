@@ -3,12 +3,12 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1. DAOs, POJOs de relación y `DatabaseModule`. **Objetivo inmediato:** triggers SQL y seed de categorías.
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). **Objetivo inmediato:** `core/` (dinero y formateadores).
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
 ## 🛠️ Tareas en Progreso (In Progress)
-- [ ] **Triggers SQL y seed idempotente de categorías** (con pruebas en Room in-memory, que también cubrirán los DAOs).
+- [ ] **`core/`:** dinero en unidades menores, formateadores de monto (miles en vivo) y de fecha, errores de dominio.
 
 ## ✅ Tareas Completadas (Done)
 ### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
@@ -20,12 +20,11 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 - [x] `a6368b5` Enums de dominio (`domain/model/Enums.kt`) y `Converters` de Room (`data/local/converter`), con 6 tests.
 - [x] Entidades Room (`data/local/entity`: 9 tablas con claves foráneas e índices), `AppDatabase` v1 y schema exportado en `app/schemas`. Room compiler añadido a KSP.
 - [x] POJOs de relación (`data/local/relation`), 7 DAOs con `Flow` (`data/local/dao`; agregados de saldo y deuda como sumas, la composición vive en el repositorio) y `DatabaseModule` de Hilt.
+- [x] Triggers de integridad (`data/local/trigger`, `BEFORE INSERT/UPDATE` con `RAISE(ABORT)`) para las reglas `CHECK` del Drift; seed idempotente de 20 categorías (`data/local/seed`, ids `system:*` y `default:*`); `DatabaseCallback` los instala. Tests con Room en memoria y Robolectric (`DatabaseTestBase`).
 - [x] Repo publicado: https://github.com/AngelsxRod/qabal (público, rama `main`).
 
 ## ⏳ Próximas Tareas (Backlog)
 Hito 1, esqueleto técnico (orden propuesto):
-- [ ] Triggers SQL que refuerzan las invariantes de `TransactionEntity` y seed idempotente de categorías.
-- [ ] `core/`: dinero en unidades menores, formateadores de monto (miles en vivo) y de fecha, errores de dominio.
 - [ ] Modelos de dominio, mappers y repositorios con reglas de negocio (saldos, ingresos, gastos, transferencias, validaciones).
 - [ ] Sistema de diseño de qabal: tokens, Inter, tema claro y oscuro, iconos propios.
 - [ ] Navegación type-safe con barra inferior y botón central `+`.
@@ -46,7 +45,7 @@ Hitos funcionales (paridad con la app Flutter):
 - Identidad: wordmark `qabal` en minúsculas, Inter, monocromo (`#FFFFFF`/`#0A0A0A`, bordes `#E5E5E5`/`#1A1A1A`), ingresos y gastos por opacidad, sin íconos cliché ni sombras difuminadas.
 
 ## ⚠️ Problemas Conocidos / Bloqueos (Blockers)
-- 🟡 Room no tiene `CHECK`: hay que diseñar bien los triggers y probarlos con Room in-memory (commit de triggers).
+- 🟡 Los triggers se crean solo en `onCreate`: si una migración cambia una regla, debe hacer `DROP TRIGGER` y recrearlo.
 - 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.1.0 y KSP 2.3.12.
 - 🟡 Tras renombrar paquetes o clases, el build incremental falla con código generado viejo: usar `./gradlew clean assembleDebug`.
 - 🟢 Sin bloqueos externos.
