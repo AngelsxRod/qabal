@@ -11,6 +11,7 @@ import com.draskint.qabal.data.local.dao.CreditCardDao
 import com.draskint.qabal.data.local.dao.DebtDao
 import com.draskint.qabal.data.local.dao.TagDao
 import com.draskint.qabal.data.local.dao.TransactionDao
+import com.draskint.qabal.data.local.dao.TransactionQueryDao
 import com.draskint.qabal.data.local.entity.AccountEntity
 import com.draskint.qabal.data.local.entity.CategoryEntity
 import com.draskint.qabal.data.local.entity.ContactEntity
@@ -45,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun creditCardDao(): CreditCardDao
     abstract fun debtDao(): DebtDao
     abstract fun transactionDao(): TransactionDao
+    abstract fun transactionQueryDao(): TransactionQueryDao
 
     companion object {
         const val NAME = "qabal.db"
