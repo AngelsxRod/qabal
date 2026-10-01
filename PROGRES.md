@@ -3,12 +3,12 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). **Objetivo inmediato:** modelos de dominio, mappers y repositorios.
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas y movimientos (95 tests en total). **Objetivo inmediato:** resto de repositorios (catálogos, tarjetas, deudas) y totales.
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
 ## 🛠️ Tareas en Progreso (In Progress)
-- [ ] **Modelos de dominio, mappers y repositorios** con reglas de negocio (saldos, ingresos, gastos, transferencias, validaciones). Empezar por cuentas y movimientos; los repositorios reciben `Clock` y lanzan `DomainException`.
+- [ ] **Resto de repositorios:** categorías, contactos, etiquetas, tarjetas (ciclo en curso, estados de cuenta, asignación automática del estado al pagar con `suggestStatementForPayment`, `CycleMovements`) y deudas (saldo, abonos, saldar, perdonar, reabrir). Aún faltan los totales por periodo y por categoría de `TransactionRepository`.
 
 ## ✅ Tareas Completadas (Done)
 ### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
@@ -22,6 +22,7 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 - [x] POJOs de relación (`data/local/relation`), 7 DAOs con `Flow` (`data/local/dao`; agregados de saldo y deuda como sumas, la composición vive en el repositorio) y `DatabaseModule` de Hilt.
 - [x] Triggers de integridad (`data/local/trigger`, `BEFORE INSERT/UPDATE` con `RAISE(ABORT)`) para las reglas `CHECK` del Drift; seed idempotente de 20 categorías (`data/local/seed`, ids `system:*` y `default:*`); `DatabaseCallback` los instala. Tests con Room en memoria y Robolectric (`DatabaseTestBase`).
 - [x] `core/format`: `Money.kt` (`formatMoney`, `formatSignedMoney`, `formatPlain`, `formatGrouped`, `parseMinor` sobre `Long`), `MoneyInput.kt` (`MoneyInputFormatter` puro, sin Compose, y `parseInputMinor`), `Dates.kt` (español, `LocalDate`). `domain/error/DomainException.kt` sellada. Port de los tests de Dart (35 tests nuevos).
+- [x] Dominio de cuentas y movimientos (`domain/model`), ciclo y validación de horario de tarjeta (`domain/card`), mappers (`data/mapper`), `IdGenerator` inyectable, `AccountRepository` (alta con tarjeta atómica, saldos reactivos) y `TransactionRepository` (validación completa del Flutter, filtros dinámicos con `@RawQuery`, etiquetas). Falta lo marcado en el backlog.
 - [x] Repo publicado: https://github.com/AngelsxRod/qabal (público, rama `main`).
 
 ## ⏳ Próximas Tareas (Backlog)
@@ -45,6 +46,7 @@ Hitos funcionales (paridad con la app Flutter):
 - Identidad: wordmark `qabal` en minúsculas, Inter, monocromo (`#FFFFFF`/`#0A0A0A`, bordes `#E5E5E5`/`#1A1A1A`), ingresos y gastos por opacidad, sin íconos cliché ni sombras difuminadas.
 
 ## ⚠️ Problemas Conocidos / Bloqueos (Blockers)
+- 🟡 `TransactionRepository.create` ya no asigna estado de cuenta solo (`autoAssignStatement` del Flutter): depende de la lógica de tarjetas, que va en el siguiente bloque.
 - 🟡 `describeError`/`errorFieldOf` del Flutter (texto y campo de formulario por `DomainException`) se portan con la UI, no están en `domain/`; usar un `when` exhaustivo.
 - 🟡 Los triggers se crean solo en `onCreate`: si una migración cambia una regla, debe hacer `DROP TRIGGER` y recrearlo.
 - 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.1.0 y KSP 2.3.12.
