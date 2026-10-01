@@ -3,11 +3,15 @@ agp = "9.1.0"
 ksp = "2.3.12"
 hilt = "2.60.1"
 androidx-activity = "1.11.0"
+room = "2.8.5"
+junit = "4.13.2"
 
 [libraries]
 androidx-activity = { module = "androidx.activity:activity", version.ref = "androidx-activity" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
