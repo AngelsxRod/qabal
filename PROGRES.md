@@ -3,15 +3,15 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (140 tests en total). La capa de datos queda completa. Sistema de diseño base listo. **Objetivo inmediato:** navegación type-safe con barra inferior y botón central `+`.
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (143 tests en total). La capa de datos queda completa. Sistema de diseño y navegación listos: **Hito 1 completo**. **Objetivo inmediato:** Hito 2 (cuentas, movimientos, Inicio y catálogos en la UI).
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
 ## 🛠️ Tareas en Progreso (In Progress)
-- [ ] **Navegación type-safe** con barra inferior y botón central `+` (ver backlog).
+- [ ] Ninguna: el Hito 1 está completo. Siguiente: Hito 2.
 
 ## ✅ Tareas Completadas (Done)
-### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
+### Hito 1: Esqueleto técnico (completo, 2026-10-01)
 - [x] `090c7bc` Código legado de Flutter eliminado (sigue en el historial).
 - [x] `6f62ef5` Proyecto Gradle Kotlin DSL con version catalog y wrapper (Gradle 9.6.0, AGP 9.4.1, compileSdk/targetSdk 37, minSdk 26).
 - [x] `5f308e2` Hilt y KSP, `QabalApp` y `MainActivity` base, `ClockModule` (`java.time.Clock` inyectable).
@@ -25,11 +25,11 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 - [x] Dominio de cuentas y movimientos (`domain/model`), ciclo y validación de horario de tarjeta (`domain/card`), mappers (`data/mapper`), `IdGenerator` inyectable, `AccountRepository` (alta con tarjeta atómica, saldos reactivos) y `TransactionRepository` (validación completa del Flutter, filtros dinámicos con `@RawQuery`, etiquetas). Falta lo marcado en el backlog.
 - [x] Repositorios de catálogos (`CategoryRepository`, `ContactRepository`, `TagRepository`), deudas (`DebtRepository`: saldo por abonos, saldar, perdonar, reabrir) y tarjetas (`CreditCardRepository` + `LedgerQueries`: resumen del ciclo, estados de cuenta, `pendingStatements`, `suggestStatementForPayment`; `observeComputed` para flujos calculados). `TransactionRepository` asigna el estado de cuenta al pagar una tarjeta (`autoAssignStatement`) y ofrece `totals`/`totalsByCategory`.
 - [x] Sistema de diseño (`ui/theme`, `ui/components`, `ui/icons`): Compose + M3 con tema monocromo claro/oscuro, Inter (Regular a Bold) y fuente monoespaciada del sistema para cifras (`QabalData`), tokens de color/forma/espaciado, `BentoCard`, `AmountText` (ingresos 100 % / gastos 50 % de opacidad), `Wordmark` y 5 iconos de trazo propios. `DesignShowcase` con previews; `MainActivity` lo muestra temporalmente.
+- [x] Navegación type-safe (`ui/navigation`, `ui/QabalApp.kt`): rutas `@Serializable` (Inicio, Movimientos, Cuentas, Más) con barra inferior propia y botón central `+` que abre `NewMovement` a pantalla completa. Pantallas provisionales (`PlaceholderScreen`). Test de UI con Robolectric (`QabalAppTest`).
+- [x] Setup de pruebas manuales (`scripts/`): `setup-emulator.sh` crea el AVD `qabal_pixel`, `run.sh` compila, instala y abre la app (emulador, `--headless`, `--device`, `--shot`) y `logs.sh` muestra el logcat. Verificado en emulador API 36.
 - [x] Repo publicado: https://github.com/AngelsxRod/qabal (público, rama `main`).
 
 ## ⏳ Próximas Tareas (Backlog)
-Hito 1, esqueleto técnico (orden propuesto):
-- [ ] Navegación type-safe con barra inferior y botón central `+`.
 
 Hitos funcionales (paridad con la app Flutter):
 - [ ] **Hito 2:** cuentas y movimientos (CRUD, filtros persistentes), Inicio (saldo total, deuda de tarjetas, neto por moneda, resumen mensual con selector de mes y devoluciones separadas) y catálogos (categorías con subcategorías, contactos, etiquetas, archivar y restaurar).
@@ -56,5 +56,6 @@ Hitos funcionales (paridad con la app Flutter):
 ```bash
 ./gradlew assembleDebug        # compila
 ./gradlew testDebugUnitTest    # pruebas unitarias
+./scripts/run.sh               # emulador + instala + abre (ver README)
 ./gradlew clean assembleDebug  # build limpio (obligatorio tras renombrar paquetes o clases: el incremental falla con código generado viejo)
 ```
