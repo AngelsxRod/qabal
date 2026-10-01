@@ -13,7 +13,7 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 ## ✅ Tareas Completadas (Done)
 ### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
 - [x] `090c7bc` Código legado de Flutter eliminado (sigue en el historial).
-- [x] `6f62ef5` Proyecto Gradle Kotlin DSL con version catalog y wrapper (Gradle 9.3.1, AGP 9.1.0, compileSdk/targetSdk 36, minSdk 26).
+- [x] `6f62ef5` Proyecto Gradle Kotlin DSL con version catalog y wrapper (Gradle 9.6.0, AGP 9.4.1, compileSdk/targetSdk 37, minSdk 26).
 - [x] `5f308e2` Hilt y KSP, `QabalApp` y `MainActivity` base, `ClockModule` (`java.time.Clock` inyectable).
 - [x] `b4ecee8` Rename a qabal; paquete `com.draskint.qabal`.
 - [x] `fb1a93e` README con la identidad y el stack.
@@ -49,8 +49,7 @@ Hitos funcionales (paridad con la app Flutter):
 ## ⚠️ Problemas Conocidos / Bloqueos (Blockers)
 - 🟡 `describeError`/`errorFieldOf` del Flutter (texto y campo de formulario por `DomainException`) se portan con la UI, no están en `domain/`; usar un `when` exhaustivo.
 - 🟡 Los triggers se crean solo en `onCreate`: si una migración cambia una regla, debe hacer `DROP TRIGGER` y recrearlo.
-- 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.1.0 y KSP 2.3.12.
-- 🟡 Compose BOM fijado en `2025.10.01`: las versiones 1.12+ (BOM 2026.x) exigen compileSdk 37 y AGP 9.1.0 solo llega a 36. Subir BOM y AGP juntos.
+- 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.4.1 y KSP 2.3.12.
 - 🟡 Tras renombrar paquetes o clases, el build incremental falla con código generado viejo: usar `./gradlew clean assembleDebug`.
 - 🟢 Sin bloqueos externos.
 
