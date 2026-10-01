@@ -7,7 +7,9 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.draskint.qabal.data.local.entity.TransactionEntity
 import com.draskint.qabal.data.local.entity.TransactionTagCrossRef
+import com.draskint.qabal.data.local.relation.CategoryTotalRow
 import com.draskint.qabal.data.local.relation.CycleSumsRow
+import com.draskint.qabal.data.local.relation.PeriodTotalsRow
 import com.draskint.qabal.data.local.relation.StatementPaidRow
 import com.draskint.qabal.data.local.relation.TransactionWithDetails
 import com.draskint.qabal.domain.model.TransactionType
@@ -118,6 +120,51 @@ interface TransactionDao {
             "FROM transactions WHERE statementId IN (:statementIds) GROUP BY statementId",
     )
     suspend fun getPaidByStatement(statementIds: List<String>): List<StatementPaidRow>
+
+    // --- Totales por periodo (epoch ms, `[from, to)`; sin transferencias ni movimientos de deuda) ---
+
+    /** Totales por moneda; [allAccounts] = true ignora [accountIds]. */
+    @Query(
+        "SELECT a.currency AS currency, " +
+            "COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND COALESCE(t.categoryId, '') <> :refundsId " +
+            "THEN t.amountMinor END), 0) AS income, " +
+            "COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amountMinor END), 0) AS grossExpense, " +
+            "COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.categoryId = :refundsId " +
+            "THEN t.amountMinor END), 0) AS refunds " +
+            "FROM transactions t JOIN accounts a ON a.id = t.accountId " +
+            "WHERE t.debtId IS NULL AND t.type IN ('INCOME', 'EXPENSE') " +
+            "AND t.occurredAt >= :from AND t.occurredAt < :to " +
+            "AND (:allAccounts OR t.accountId IN (:accountIds)) " +
+            "GROUP BY a.currency ORDER BY a.currency",
+    )
+    suspend fun getPeriodTotals(
+        refundsId: String,
+        from: Long,
+        to: Long,
+        allAccounts: Boolean,
+        accountIds: List<String>,
+    ): List<PeriodTotalsRow>
+
+    /**
+     * Totales por moneda y categoría de movimientos de [type]; [refundsOnly] = true solo cuenta la
+     * categoría [refundsId] y false la excluye. [currency] nulo = todas.
+     */
+    @Query(
+        "SELECT a.currency AS currency, t.categoryId AS categoryId, SUM(t.amountMinor) AS total " +
+            "FROM transactions t JOIN accounts a ON a.id = t.accountId " +
+            "WHERE t.debtId IS NULL AND t.type = :type " +
+            "AND ((:refundsOnly AND t.categoryId = :refundsId) OR (NOT :refundsOnly AND COALESCE(t.categoryId, '') <> :refundsId)) " +
+            "AND t.occurredAt >= :from AND t.occurredAt < :to AND (:currency IS NULL OR a.currency = :currency) " +
+            "GROUP BY a.currency, t.categoryId",
+    )
+    suspend fun getCategoryTotals(
+        type: TransactionType,
+        refundsId: String,
+        refundsOnly: Boolean,
+        from: Long,
+        to: Long,
+        currency: String?,
+    ): List<CategoryTotalRow>
 
     // --- Etiquetas ---
 

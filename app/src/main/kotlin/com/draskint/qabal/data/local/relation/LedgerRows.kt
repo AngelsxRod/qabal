@@ -24,3 +24,8 @@ data class StatementWithCard(
     @Relation(parentColumn = "accountId", entityColumn = "id")
     val card: AccountEntity,
 )
+
+/** Ingresos, gastos brutos y devoluciones de una moneda (ver `TransactionDao.getPeriodTotals`). */
+data class PeriodTotalsRow(val currency: String, val income: Long, val grossExpense: Long, val refunds: Long)
+
+data class CategoryTotalRow(val currency: String, val categoryId: String?, val total: Long)
