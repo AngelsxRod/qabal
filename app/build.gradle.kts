@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -19,4 +21,10 @@ android {
             isMinifyEnabled = false
         }
     }
+}
+
+dependencies {
+    implementation(libs.androidx.activity)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 }
