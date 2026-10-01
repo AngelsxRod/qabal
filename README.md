@@ -47,12 +47,24 @@ app/src/main/kotlin/com/draskint/qabal/
 
 ## Desarrollo
 
-Requisitos: JDK 17 o superior y Android SDK 36.
+Requisitos: JDK 17 o superior y Android SDK 37 (compileSdk). Para ejecutar la app, el emulador de Android con KVM o un teléfono con depuración USB.
 
 ```bash
 ./gradlew assembleDebug        # compila
 ./gradlew testDebugUnitTest    # pruebas unitarias
 ```
+
+### Probar la app
+
+```bash
+./scripts/setup-emulator.sh          # una sola vez: imagen de sistema y AVD `qabal_pixel`
+./scripts/run.sh                     # arranca el emulador, instala y abre qabal
+./scripts/run.sh --headless --shot captura.png   # sin ventana, guardando una captura
+./scripts/run.sh --device            # en un teléfono conectado, sin emulador
+./scripts/logs.sh                    # logcat de qabal
+```
+
+Los scripts buscan el SDK en `$ANDROID_HOME` (por defecto `~/Android/Sdk`); `AVD_NAME`, `AVD_DEVICE` y `AVD_IMAGE` se pueden sobrescribir por variable de entorno.
 
 ## Convenciones
 
