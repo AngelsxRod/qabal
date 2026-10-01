@@ -5,7 +5,7 @@
         android:name=".QabalApp"
         android:allowBackup="false"
         android:label="qabal"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.Qabal">
 
         <activity
             android:name=".MainActivity"
