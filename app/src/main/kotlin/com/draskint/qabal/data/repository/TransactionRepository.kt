@@ -16,7 +16,11 @@ import com.draskint.qabal.domain.error.InvalidInputException
 import com.draskint.qabal.domain.error.InvalidStatementLinkException
 import com.draskint.qabal.domain.error.InvalidTransferException
 import com.draskint.qabal.domain.error.NotFoundException
+import com.draskint.qabal.data.local.seed.REFUNDS_CATEGORY_ID
+import com.draskint.qabal.domain.model.AccountType
 import com.draskint.qabal.domain.model.CategoryKind
+import com.draskint.qabal.domain.model.CategoryTotal
+import com.draskint.qabal.domain.model.PeriodTotals
 import com.draskint.qabal.domain.model.DebtStatus
 import com.draskint.qabal.domain.model.Transaction
 import com.draskint.qabal.domain.model.TransactionFilter
@@ -24,6 +28,7 @@ import com.draskint.qabal.domain.model.TransactionInput
 import com.draskint.qabal.domain.model.TransactionType
 import com.draskint.qabal.domain.model.repaymentTypeOf
 import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -34,22 +39,34 @@ class TransactionRepository @Inject constructor(
     private val db: AppDatabase,
     private val clock: Clock,
     private val ids: IdGenerator,
+    private val ledger: LedgerQueries,
 ) {
     private val transactions get() = db.transactionDao()
 
     // --- Escritura ---
 
-    /** Crea un movimiento (y sus etiquetas) en una sola transacción. */
-    suspend fun create(input: TransactionInput, tagIds: Set<String> = emptySet()): Transaction =
+    /**
+     * Crea un movimiento (y sus etiquetas) en una sola transacción.
+     *
+     * Si es una transferencia hacia una tarjeta de crédito sin `statementId` y [autoAssignStatement]
+     * es verdadero, se vincula al estado de cuenta que sugiere `suggestStatementForPayment` (si
+     * existe). Pasar `false` para, por ejemplo, un pago adelantado del ciclo en curso.
+     */
+    suspend fun create(
+        input: TransactionInput,
+        tagIds: Set<String> = emptySet(),
+        autoAssignStatement: Boolean = true,
+    ): Transaction =
         db.withTransaction {
-            validate(input)
+            val i = if (autoAssignStatement) withSuggestedStatement(input) else input
+            validate(i)
             val now = clock.instant()
             val entity = TransactionEntity(
-                id = ids.newId(), accountId = input.accountId, categoryId = input.categoryId, type = input.type,
-                amountMinor = input.amountMinor, transferAccountId = input.transferAccountId,
-                transferAmountMinor = input.transferAmountMinor, contactId = input.contactId,
-                debtId = input.debtId, statementId = input.statementId, note = input.note,
-                receiptPath = input.receiptPath, occurredAt = input.occurredAt, createdAt = now, updatedAt = now,
+                id = ids.newId(), accountId = i.accountId, categoryId = i.categoryId, type = i.type,
+                amountMinor = i.amountMinor, transferAccountId = i.transferAccountId,
+                transferAmountMinor = i.transferAmountMinor, contactId = i.contactId,
+                debtId = i.debtId, statementId = i.statementId, note = i.note,
+                receiptPath = i.receiptPath, occurredAt = i.occurredAt, createdAt = now, updatedAt = now,
             )
             transactions.insert(entity)
             replaceTags(entity.id, tagIds)
@@ -91,6 +108,14 @@ class TransactionRepository @Inject constructor(
         }
     }
 
+    /** Vincula el pago a una tarjeta con su estado de cuenta pendiente más antiguo, si hay uno. */
+    private suspend fun withSuggestedStatement(i: TransactionInput): TransactionInput {
+        if (i.type != TransactionType.TRANSFER || i.statementId != null || i.transferAccountId == null) return i
+        val dest = db.accountDao().getById(i.transferAccountId)
+        if (dest == null || dest.type != AccountType.CREDIT_CARD) return i
+        return i.copy(statementId = ledger.suggestStatementForPayment(dest.id))
+    }
+
     // --- Lectura ---
 
     suspend fun get(id: String): Transaction? = transactions.getById(id)?.toDomain()
@@ -100,6 +125,47 @@ class TransactionRepository @Inject constructor(
 
     fun observe(filter: TransactionFilter = TransactionFilter()): Flow<List<Transaction>> =
         db.transactionQueryDao().observe(buildQuery(filter)).map { rows -> rows.map { it.toDomain() } }
+
+    // --- Totales ---
+
+    /**
+     * Totales por moneda de `[from, to)`, opcionalmente de [accountIds]; sin transferencias ni
+     * movimientos de deuda. El gasto es neto de devoluciones.
+     */
+    suspend fun totals(from: Instant, to: Instant, accountIds: Set<String>? = null): List<PeriodTotals> {
+        if (accountIds != null && accountIds.isEmpty()) return emptyList()
+        return transactions.getPeriodTotals(
+            REFUNDS_CATEGORY_ID, from.toEpochMilli(), to.toEpochMilli(), accountIds == null, accountIds?.toList().orEmpty(),
+        ).map { PeriodTotals(it.currency, it.income, it.grossExpense - it.refunds, it.refunds) }
+    }
+
+    fun observeTotals(from: Instant, to: Instant, accountIds: Set<String>? = null): Flow<List<PeriodTotals>> =
+        db.observeComputed("transactions", "accounts") { totals(from, to, accountIds) }
+
+    /**
+     * Totales por moneda y categoría de `[from, to)`, de mayor a menor dentro de cada moneda. En
+     * gastos se añade una línea **negativa** con las devoluciones (`system:refunds`); en ingresos las
+     * devoluciones no aparecen.
+     */
+    suspend fun totalsByCategory(
+        from: Instant,
+        to: Instant,
+        kind: CategoryKind,
+        currency: String? = null,
+    ): List<CategoryTotal> {
+        val isExpense = kind == CategoryKind.EXPENSE
+        val type = if (isExpense) TransactionType.EXPENSE else TransactionType.INCOME
+        val (fromMs, toMs) = from.toEpochMilli() to to.toEpochMilli()
+        val main = transactions.getCategoryTotals(type, REFUNDS_CATEGORY_ID, false, fromMs, toMs, currency)
+            .map { CategoryTotal(it.currency, it.categoryId, it.total) }
+        val refunds = if (isExpense) {
+            transactions.getCategoryTotals(TransactionType.INCOME, REFUNDS_CATEGORY_ID, true, fromMs, toMs, currency)
+                .map { CategoryTotal(it.currency, REFUNDS_CATEGORY_ID, -it.total) }
+        } else {
+            emptyList()
+        }
+        return (main + refunds).sortedWith(compareBy<CategoryTotal> { it.currency }.thenByDescending { it.totalMinor })
+    }
 
     private fun buildQuery(f: TransactionFilter): SimpleSQLiteQuery {
         val where = mutableListOf<String>()
