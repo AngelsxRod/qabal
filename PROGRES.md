@@ -3,12 +3,12 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1. **Objetivo inmediato:** DAOs y POJOs de relación.
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1. DAOs, POJOs de relación y `DatabaseModule`. **Objetivo inmediato:** triggers SQL y seed de categorías.
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
 ## 🛠️ Tareas en Progreso (In Progress)
-- [ ] **DAOs y POJOs de relación:** `TransactionWithDetails`, `AccountWithCard`, `CategoryWithChildren`, `DebtWithContact`.
+- [ ] **Triggers SQL y seed idempotente de categorías** (con pruebas en Room in-memory, que también cubrirán los DAOs).
 
 ## ✅ Tareas Completadas (Done)
 ### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
@@ -19,11 +19,11 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 - [x] `fb1a93e` README con la identidad y el stack.
 - [x] `a6368b5` Enums de dominio (`domain/model/Enums.kt`) y `Converters` de Room (`data/local/converter`), con 6 tests.
 - [x] Entidades Room (`data/local/entity`: 9 tablas con claves foráneas e índices), `AppDatabase` v1 y schema exportado en `app/schemas`. Room compiler añadido a KSP.
+- [x] POJOs de relación (`data/local/relation`), 7 DAOs con `Flow` (`data/local/dao`; agregados de saldo y deuda como sumas, la composición vive en el repositorio) y `DatabaseModule` de Hilt.
 - [x] Repo publicado: https://github.com/AngelsxRod/qabal (público, rama `main`).
 
 ## ⏳ Próximas Tareas (Backlog)
 Hito 1, esqueleto técnico (orden propuesto):
-- [ ] DAOs y POJOs de relación: `TransactionWithDetails`, `AccountWithCard`, `CategoryWithChildren`, `DebtWithContact`.
 - [ ] Triggers SQL que refuerzan las invariantes de `TransactionEntity` y seed idempotente de categorías.
 - [ ] `core/`: dinero en unidades menores, formateadores de monto (miles en vivo) y de fecha, errores de dominio.
 - [ ] Modelos de dominio, mappers y repositorios con reglas de negocio (saldos, ingresos, gastos, transferencias, validaciones).
