@@ -3,12 +3,12 @@
 > Hoja de ruta compartida entre desarrolladores y agentes de IA. **Léela al empezar una sesión y actualízala al terminar** (en el mismo commit o en uno `docs:` aparte). Última actualización: 2026-10-01.
 
 ## 🎯 Estado Actual
-Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (135 tests en total). La capa de datos queda completa. **Objetivo inmediato:** sistema de diseño y navegación (UI).
+Reescritura nativa de la app Flutter original como **qabal** (Android, Kotlin, Compose M3, Room, Hilt). Estamos construyendo el esqueleto técnico de abajo hacia arriba (Data → Domain → UI). Hecho: proyecto Gradle, Hilt, enums de dominio, convertidores y entidades de Room con `AppDatabase` v1, DAOs, POJOs de relación, `DatabaseModule`, triggers de integridad y seed de categorías (20 tests con Room en memoria y Robolectric). `core/` (dinero, formateadores y errores de dominio). repositorios de cuentas, movimientos, catálogos (categorías, contactos, etiquetas), deudas y tarjetas (ciclo, estados de cuenta, pendientes), asignación automática del estado al pagar y totales por periodo y categoría (135 tests en total). La capa de datos queda completa. Sistema de diseño base listo. **Objetivo inmediato:** navegación type-safe con barra inferior y botón central `+`.
 
 Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAUDE.md` de `Proyectos/personal`).
 
 ## 🛠️ Tareas en Progreso (In Progress)
-- [ ] Ninguna: elegir la siguiente del backlog (sistema de diseño → navegación).
+- [ ] **Navegación type-safe** con barra inferior y botón central `+` (ver backlog).
 
 ## ✅ Tareas Completadas (Done)
 ### Hito 1: Esqueleto técnico (en curso desde 2026-10-01)
@@ -24,11 +24,11 @@ Los commits van atómicos, en español y sin trailer `Co-Authored-By` (ver `CLAU
 - [x] `core/format`: `Money.kt` (`formatMoney`, `formatSignedMoney`, `formatPlain`, `formatGrouped`, `parseMinor` sobre `Long`), `MoneyInput.kt` (`MoneyInputFormatter` puro, sin Compose, y `parseInputMinor`), `Dates.kt` (español, `LocalDate`). `domain/error/DomainException.kt` sellada. Port de los tests de Dart (35 tests nuevos).
 - [x] Dominio de cuentas y movimientos (`domain/model`), ciclo y validación de horario de tarjeta (`domain/card`), mappers (`data/mapper`), `IdGenerator` inyectable, `AccountRepository` (alta con tarjeta atómica, saldos reactivos) y `TransactionRepository` (validación completa del Flutter, filtros dinámicos con `@RawQuery`, etiquetas). Falta lo marcado en el backlog.
 - [x] Repositorios de catálogos (`CategoryRepository`, `ContactRepository`, `TagRepository`), deudas (`DebtRepository`: saldo por abonos, saldar, perdonar, reabrir) y tarjetas (`CreditCardRepository` + `LedgerQueries`: resumen del ciclo, estados de cuenta, `pendingStatements`, `suggestStatementForPayment`; `observeComputed` para flujos calculados). `TransactionRepository` asigna el estado de cuenta al pagar una tarjeta (`autoAssignStatement`) y ofrece `totals`/`totalsByCategory`.
+- [x] Sistema de diseño (`ui/theme`, `ui/components`, `ui/icons`): Compose + M3 con tema monocromo claro/oscuro, Inter (Regular a Bold) y fuente monoespaciada del sistema para cifras (`QabalData`), tokens de color/forma/espaciado, `BentoCard`, `AmountText` (ingresos 100 % / gastos 50 % de opacidad), `Wordmark` y 5 iconos de trazo propios. `DesignShowcase` con previews; `MainActivity` lo muestra temporalmente.
 - [x] Repo publicado: https://github.com/AngelsxRod/qabal (público, rama `main`).
 
 ## ⏳ Próximas Tareas (Backlog)
 Hito 1, esqueleto técnico (orden propuesto):
-- [ ] Sistema de diseño de qabal: tokens, Inter, tema claro y oscuro, iconos propios.
 - [ ] Navegación type-safe con barra inferior y botón central `+`.
 
 Hitos funcionales (paridad con la app Flutter):
@@ -50,8 +50,10 @@ Hitos funcionales (paridad con la app Flutter):
 - 🟡 `describeError`/`errorFieldOf` del Flutter (texto y campo de formulario por `DomainException`) se portan con la UI, no están en `domain/`; usar un `when` exhaustivo.
 - 🟡 Los triggers se crean solo en `onCreate`: si una migración cambia una regla, debe hacer `DROP TRIGGER` y recrearlo.
 - 🟡 AGP 9 trae Kotlin integrado: si se agrega un plugin nuevo (Compose, serialization), comprobar que su versión es compatible con AGP 9.1.0 y KSP 2.3.12.
+- 🟡 Compose BOM fijado en `2025.10.01`: las versiones 1.12+ (BOM 2026.x) exigen compileSdk 37 y AGP 9.1.0 solo llega a 36. Subir BOM y AGP juntos.
 - 🟡 Tras renombrar paquetes o clases, el build incremental falla con código generado viejo: usar `./gradlew clean assembleDebug`.
 - 🟢 Sin bloqueos externos.
+
 
 ## 🧰 Comandos útiles
 ```bash
