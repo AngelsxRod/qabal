@@ -12,7 +12,10 @@ import com.draskint.qabal.domain.error.InvalidInputException
 import com.draskint.qabal.domain.error.InvalidStatementLinkException
 import com.draskint.qabal.domain.error.InvalidTransferException
 import com.draskint.qabal.domain.error.NotFoundException
+import com.draskint.qabal.domain.model.AccountInput
 import com.draskint.qabal.domain.model.AccountType
+import com.draskint.qabal.domain.model.CategoryKind
+import com.draskint.qabal.domain.model.CreditCardSettings
 import com.draskint.qabal.domain.model.DebtStatus
 import com.draskint.qabal.domain.model.TransactionFilter
 import com.draskint.qabal.domain.model.TransactionInput
@@ -269,5 +272,129 @@ class TransactionRepositoryTest : RepositoryTestBase() {
         assertFails<InvalidInputException> {
             transactions.create(input(a.id, TransactionType.TRANSFER, transferTo = b.id, debtId = "d"))
         }
+    }
+
+    // --- Asignación automática de estado de cuenta ---
+
+    private fun card(name: String = "Visa") = runBlocking {
+        accounts.create(
+            AccountInput(name, AccountType.CREDIT_CARD, "GTQ"),
+            CreditCardSettings(creditLimitMinor = 500_000, statementDay = 15, dueDay = 5),
+        )
+    }
+
+    private fun statement(id: String, cardId: String, closing: String, balance: Long = 10_000) = runBlocking {
+        val closingDate = LocalDate.parse(closing)
+        db.creditCardDao().insertStatement(
+            CreditCardStatementEntity(
+                id, cardId, closingDate.minusMonths(1).plusDays(1), closingDate, closingDate.plusDays(21),
+                balance, 1_000, createdAt = now, updatedAt = now,
+            ),
+        )
+    }
+
+    @Test
+    fun `un pago a la tarjeta se vincula al estado pendiente mas antiguo`() = runBlocking<Unit> {
+        val bank = newAccount()
+        val visa = card()
+        statement("s1", visa.id, "2026-08-15")
+        statement("s2", visa.id, "2026-09-15")
+
+        val first = transactions.create(input(bank.id, TransactionType.TRANSFER, 10_000, transferTo = visa.id))
+        assertEquals("s1", first.statementId)
+        // s1 quedó pagado por completo: el siguiente pago va al s2.
+        assertEquals("s2", transactions.create(input(bank.id, TransactionType.TRANSFER, 500, transferTo = visa.id)).statementId)
+    }
+
+    @Test
+    fun `no asigna estado si se pide lo contrario, ya viene indicado o no aplica`() = runBlocking<Unit> {
+        val bank = newAccount()
+        val other = newAccount("Otra")
+        val visa = card()
+        statement("s1", visa.id, "2026-08-15")
+        statement("s2", visa.id, "2026-09-15")
+
+        val manual = input(bank.id, TransactionType.TRANSFER, 500, transferTo = visa.id)
+        assertNull(transactions.create(manual, autoAssignStatement = false).statementId)
+        assertEquals("s2", transactions.create(manual.copy(statementId = "s2")).statementId)
+        assertNull(transactions.create(input(bank.id, TransactionType.TRANSFER, 500, transferTo = other.id)).statementId)
+        assertNull(transactions.create(input(bank.id, TransactionType.EXPENSE, 500)).statementId)
+        // Sin estados de cuenta registrados no hay nada que asignar.
+        assertNull(transactions.create(input(bank.id, TransactionType.TRANSFER, 500, transferTo = card("Mastercard").id)).statementId)
+    }
+
+    @Test
+    fun `editar un movimiento no le asigna estado de cuenta`() = runBlocking<Unit> {
+        val bank = newAccount()
+        val visa = card()
+        val payment = transactions.create(input(bank.id, TransactionType.TRANSFER, 500, transferTo = visa.id))
+        assertNull(payment.statementId)
+        statement("s1", visa.id, "2026-09-15")
+        transactions.update(payment.id, input(bank.id, TransactionType.TRANSFER, 600, transferTo = visa.id))
+        assertNull(transactions.get(payment.id)!!.statementId)
+    }
+
+    // --- Totales ---
+
+    private fun day(date: String): java.time.Instant = LocalDate.parse(date).atTime(10, 0).toInstant(java.time.ZoneOffset.UTC)
+
+    private val octFrom = day("2026-10-01").minus(Duration.ofHours(10))
+    private val octTo = day("2026-11-01").minus(Duration.ofHours(10))
+
+    @Test
+    fun `los totales por moneda restan las devoluciones y excluyen transferencias y deudas`() = runBlocking<Unit> {
+        val gtq = newAccount("GTQ")
+        val gtq2 = newAccount("GTQ 2")
+        val usd = newAccount("USD", currency = "USD")
+        transactions.create(input(gtq.id, TransactionType.INCOME, 100_000, day("2026-10-02"), categoryId = "default:salary"))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 30_000, day("2026-10-03"), categoryId = "default:food"))
+        transactions.create(input(gtq2.id, TransactionType.EXPENSE, 5_000, day("2026-10-04")))
+        transactions.create(input(gtq.id, TransactionType.INCOME, 2_000, day("2026-10-05"), categoryId = "system:refunds"))
+        transactions.create(input(gtq.id, TransactionType.TRANSFER, 9_999, day("2026-10-06"), transferTo = gtq2.id))
+        transactions.create(input(usd.id, TransactionType.EXPENSE, 700, day("2026-10-07")))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 8_888, day("2026-09-30"))) // fuera del periodo
+        db.contactDao().insert(contact("c"))
+        db.debtDao().insert(debt("d2", "c"))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 4_444, day("2026-10-08"), debtId = "d2"))
+
+        val totals = transactions.totals(octFrom, octTo)
+        assertEquals(listOf("GTQ", "USD"), totals.map { it.currency })
+        val q = totals[0]
+        assertEquals(100_000, q.incomeMinor)
+        assertEquals(33_000, q.expenseMinor) // 35 000 − 2 000 de devoluciones
+        assertEquals(2_000, q.refundsMinor)
+        assertEquals(35_000, q.grossExpenseMinor)
+        assertEquals(700, totals[1].expenseMinor)
+
+        assertEquals(listOf("GTQ"), transactions.totals(octFrom, octTo, setOf(gtq.id, gtq2.id)).map { it.currency })
+        assertEquals(30_000L - 2_000, transactions.totals(octFrom, octTo, setOf(gtq.id)).single().expenseMinor)
+        assertTrue(transactions.totals(octFrom, octTo, emptySet()).isEmpty())
+        assertEquals(totals, transactions.observeTotals(octFrom, octTo).first())
+    }
+
+    @Test
+    fun `los totales por categoria van de mayor a menor con devoluciones en negativo`() = runBlocking<Unit> {
+        val gtq = newAccount("GTQ")
+        val usd = newAccount("USD", currency = "USD")
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 1_000, day("2026-10-02"), categoryId = "default:food"))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 4_000, day("2026-10-03"), categoryId = "default:groceries"))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 500, day("2026-10-04"), categoryId = "default:food"))
+        transactions.create(input(gtq.id, TransactionType.EXPENSE, 300, day("2026-10-05"))) // sin categoría
+        transactions.create(input(gtq.id, TransactionType.INCOME, 700, day("2026-10-06"), categoryId = "system:refunds"))
+        transactions.create(input(usd.id, TransactionType.EXPENSE, 90, day("2026-10-07"), categoryId = "default:food"))
+        transactions.create(input(gtq.id, TransactionType.INCOME, 50_000, day("2026-10-08"), categoryId = "default:salary"))
+
+        val expenses = transactions.totalsByCategory(octFrom, octTo, CategoryKind.EXPENSE)
+        assertEquals(
+            listOf(
+                Triple("GTQ", "default:groceries", 4_000L), Triple("GTQ", "default:food", 1_500L),
+                Triple("GTQ", null, 300L), Triple("GTQ", "system:refunds", -700L), Triple("USD", "default:food", 90L),
+            ),
+            expenses.map { Triple(it.currency, it.categoryId, it.totalMinor) },
+        )
+        assertEquals(listOf("USD"), transactions.totalsByCategory(octFrom, octTo, CategoryKind.EXPENSE, "USD").map { it.currency })
+
+        val income = transactions.totalsByCategory(octFrom, octTo, CategoryKind.INCOME)
+        assertEquals(listOf("default:salary"), income.map { it.categoryId })
     }
 }

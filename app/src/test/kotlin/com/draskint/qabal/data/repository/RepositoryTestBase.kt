@@ -16,12 +16,14 @@ abstract class RepositoryTestBase : DatabaseTestBase() {
     protected val ids = IdGenerator { "id-${++counter}" }
 
     protected lateinit var accounts: AccountRepository
+    protected lateinit var ledger: LedgerQueries
     protected lateinit var transactions: TransactionRepository
 
     @Before
     fun createRepositories() {
         accounts = AccountRepository(db, clock, ids)
-        transactions = TransactionRepository(db, clock, ids)
+        ledger = LedgerQueries(db, clock)
+        transactions = TransactionRepository(db, clock, ids, ledger)
     }
 
     protected fun newAccount(

@@ -37,7 +37,7 @@ class CreditCardRepositoryTest : RepositoryTestBase() {
 
     @Before
     fun createCardRepository() = runBlocking {
-        cards = CreditCardRepository(db, LedgerQueries(db, clock), clock, ids)
+        cards = CreditCardRepository(db, ledger, clock, ids)
         visa = accounts.create(AccountInput("Visa", AccountType.CREDIT_CARD, "GTQ", -50_000), settings)
         bank = newAccount("Banco")
     }
